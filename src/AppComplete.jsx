@@ -233,32 +233,47 @@ function AppComplete() {
   useEffect(() => {
     let isCancelled = false
     const isMobile = window.innerWidth <= 768 || window.innerHeight > window.innerWidth
+    // Preload & Decode frames with complete verification before revealing homepage
     const primaryHero = isMobile ? HERO_MOBILE_FRAMES : HERO_DESKTOP_FRAMES
-    const totalPriorityFrames = primaryHero.length + TUNNEL_FRAMES.length + CLOUDS_FRAMES.length
+    const totalRequiredFrames = primaryHero.length + TUNNEL_FRAMES.length + CLOUDS_FRAMES.length
     let loadedCount = 0
 
-    const onImageLoaded = () => {
+    const updateProgress = () => {
       if (isCancelled) return
       loadedCount++
-      const percent = Math.min(Math.round((loadedCount / totalPriorityFrames) * 100), 100)
+      const percent = Math.min(Math.round((loadedCount / totalRequiredFrames) * 100), 100)
       setLoadPercent(percent)
 
-      // Fast interactive readiness: as soon as first 16 frames are ready, reveal UI
-      if (loadedCount >= 16) {
-        setIsLoading(false)
+      // Only enter homepage when 100% of required sequence frames are fully loaded & verified in GPU memory
+      if (loadedCount >= totalRequiredFrames) {
+        setTimeout(() => {
+          if (!isCancelled) {
+            setIsLoading(false)
+          }
+        }, 250) // subtle smooth transition delay
       }
     }
 
-    const loadSequence = (urls, isPriority = true) => {
+    const loadAndVerifySequence = (urls, isPriority = true) => {
       return urls.map((url) => {
         const img = new Image()
         img.src = url
+
         if (isPriority) {
+          const handleComplete = () => {
+            // img.decode() forces GPU to decompress image immediately, eliminating first-scroll stutter/lag
+            if (typeof img.decode === 'function') {
+              img.decode().then(updateProgress).catch(updateProgress)
+            } else {
+              updateProgress()
+            }
+          }
+
           if (img.complete && img.naturalWidth > 0) {
-            onImageLoaded()
+            handleComplete()
           } else {
-            img.onload = onImageLoaded
-            img.onerror = onImageLoaded
+            img.onload = handleComplete
+            img.onerror = updateProgress
           }
         }
         return img
@@ -266,23 +281,25 @@ function AppComplete() {
     }
 
     if (isMobile) {
-      heroMobileImagesRef.current = loadSequence(HERO_MOBILE_FRAMES, true)
-      tunnelImagesRef.current = loadSequence(TUNNEL_FRAMES, true)
-      cloudsImagesRef.current = loadSequence(CLOUDS_FRAMES, true)
-      heroDesktopImagesRef.current = loadSequence(HERO_DESKTOP_FRAMES, false)
+      heroMobileImagesRef.current = loadAndVerifySequence(HERO_MOBILE_FRAMES, true)
+      tunnelImagesRef.current = loadAndVerifySequence(TUNNEL_FRAMES, true)
+      cloudsImagesRef.current = loadAndVerifySequence(CLOUDS_FRAMES, true)
+      // Background idle load for non-active screen mode
+      heroDesktopImagesRef.current = loadAndVerifySequence(HERO_DESKTOP_FRAMES, false)
     } else {
-      heroDesktopImagesRef.current = loadSequence(HERO_DESKTOP_FRAMES, true)
-      tunnelImagesRef.current = loadSequence(TUNNEL_FRAMES, true)
-      cloudsImagesRef.current = loadSequence(CLOUDS_FRAMES, true)
-      heroMobileImagesRef.current = loadSequence(HERO_MOBILE_FRAMES, false)
+      heroDesktopImagesRef.current = loadAndVerifySequence(HERO_DESKTOP_FRAMES, true)
+      tunnelImagesRef.current = loadAndVerifySequence(TUNNEL_FRAMES, true)
+      cloudsImagesRef.current = loadAndVerifySequence(CLOUDS_FRAMES, true)
+      // Background idle load for non-active screen mode
+      heroMobileImagesRef.current = loadAndVerifySequence(HERO_MOBILE_FRAMES, false)
     }
 
-    // Safety fallback timeout to ensure experience shows immediately even on slow networks
+    // High ceiling fallback safety timeout (e.g. if a single asset network hangs)
     const fallbackTimeout = setTimeout(() => {
       if (!isCancelled) {
         setIsLoading(false)
       }
-    }, 1200)
+    }, 7000)
 
     return () => {
       isCancelled = true
@@ -664,10 +681,13 @@ function AppComplete() {
         <div className="loader-card">
           <div className="loader-ring" aria-hidden="true" />
           <div className="loader-text-group">
-            <span className="loader-label">Loading experience</span>
+            <span className="loader-label">INITIALIZING SYSTEM</span>
             <span className="loader-progress">
-              {isLoading ? `Preparing cinematic launch (${loadPercent}%)` : 'Ready'}
+              {isLoading ? `DECODING FRAMES • ${loadPercent}%` : 'READY'}
             </span>
+          </div>
+          <div className="loader-bar-track" aria-hidden="true">
+            <div className="loader-bar-fill" style={{ width: `${loadPercent}%` }} />
           </div>
         </div>
       </div>
