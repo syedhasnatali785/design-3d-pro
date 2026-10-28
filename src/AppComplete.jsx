@@ -39,10 +39,8 @@ const CLOUDS_FRAMES = Object.entries(
   .sort(([a], [b]) => a.localeCompare(b, undefined, { numeric: true }))
   .map(([, src]) => src)
 
-const HERO_END = 0.30
-const TRANSITION_1_END = 0.38
+const HERO_END = 0.32
 const TUNNEL_END = 0.68
-const TRANSITION_2_END = 0.76
 
 // Story & Tagline content for every transition & stage (connected with menu navigation)
 const TRANSITION_STORIES = [
@@ -163,6 +161,24 @@ function renderBlendedSequence(ctx, images, seqProgress, canvasWidth, canvasHeig
   }
 }
 
+// Ultra-subtle, organic atmospheric mist / cloud puff generator
+function createAtmosphericMists(count, width, height) {
+  const mists = []
+  for (let i = 0; i < count; i++) {
+    mists.push({
+      x: Math.random() * width * 1.4 - width * 0.2,
+      y: Math.random() * height * 0.95,
+      radiusX: (Math.random() * 0.35 + 0.35) * Math.max(width, height), // Wide soft volumetric ellipse
+      radiusY: (Math.random() * 0.18 + 0.14) * Math.min(width, height),
+      speedX: (Math.random() * 0.2 + 0.12), // Very slow majestic horizontal drift
+      sway: Math.random() * Math.PI * 2,
+      swaySpeed: Math.random() * 0.003 + 0.0015,
+      maxOpacity: Math.random() * 0.055 + 0.045, // Incredibly faint (4.5% to 10% opacity) - feels alive without blocking view
+    })
+  }
+  return mists
+}
+
 // Lightweight procedural snowfall generator (halki halki baraf bari)
 function createSnowflakes(count, width, height) {
   const flakes = []
@@ -195,6 +211,7 @@ function AppComplete() {
   const canvasRef = useRef(null)
   const snowCanvasRef = useRef(null)
   const snowflakesRef = useRef([])
+  const cloudsRef = useRef([])
   const whiteRef = useRef(null)
   const heroCopyRef = useRef(null)
   const scrollCueRef = useRef(null)
@@ -349,6 +366,7 @@ function AppComplete() {
           const isMobileNow = width <= 768 || height > width
           const count = isMobileNow ? 38 : 72
           snowflakesRef.current = createSnowflakes(count, targetW, targetH)
+          cloudsRef.current = createAtmosphericMists(isMobileNow ? 3 : 5, targetW, targetH)
         }
       }
     }
@@ -385,87 +403,48 @@ function AppComplete() {
             ? (heroMobileImagesRef.current.length > 0 ? heroMobileImagesRef.current : heroDesktopImagesRef.current)
             : (heroDesktopImagesRef.current.length > 0 ? heroDesktopImagesRef.current : heroMobileImagesRef.current)
 
-          if (currentProgress <= HERO_END) {
-            // Sequence 1: Rocket Launch with smooth inter-frame blending
-            const seqP = clamp(currentProgress / HERO_END, 0, 1)
-            renderBlendedSequence(
-              ctx,
-              activeHero,
-              seqP,
-              canvas.width,
-              canvas.height,
-            )
-          } else if (currentProgress < TRANSITION_1_END) {
-            // Transition 1: Rocket to Tunnel (cross-blend + white wipe)
-            const transP = clamp(
-              (currentProgress - HERO_END) / (TRANSITION_1_END - HERO_END),
-              0,
-              1,
-            )
-            const lastHero = getLoadedFrame(
-              activeHero,
-              activeHero.length - 1,
-            )
+          // Seamless direct playback across 3 continuous sequence stages
+          // No freeze/dead-zone pauses: sequence 1 -> sequence 2 -> sequence 3 flow smoothly
+          const crossBlendRange = 0.04 // Soft cinematic cross-dissolve overlap
+
+          if (currentProgress < HERO_END - crossBlendRange) {
+            // Sequence 1: Rocket Launch
+            const seqP = clamp(currentProgress / (HERO_END - crossBlendRange), 0, 1)
+            renderBlendedSequence(ctx, activeHero, seqP, canvas.width, canvas.height)
+          } else if (currentProgress <= HERO_END) {
+            // Seamless Overlap: Rocket Launch ending gently cross-fades into Tunnel starting
+            const blendRatio = (currentProgress - (HERO_END - crossBlendRange)) / crossBlendRange
+            renderBlendedSequence(ctx, activeHero, 1, canvas.width, canvas.height)
             const firstTunnel = getLoadedFrame(tunnelImagesRef.current, 0)
-
-            if (lastHero) {
-              drawCover(ctx, lastHero, canvas.width, canvas.height, 1)
+            if (firstTunnel) {
+              drawCover(ctx, firstTunnel, canvas.width, canvas.height, blendRatio)
             }
-            if (firstTunnel && transP > 0.01) {
-              drawCover(ctx, firstTunnel, canvas.width, canvas.height, transP)
-            }
-          } else if (currentProgress <= TUNNEL_END) {
-            // Sequence 2: Ice Tunnel with smooth inter-frame blending
+          } else if (currentProgress < TUNNEL_END - crossBlendRange) {
+            // Sequence 2: Ice Tunnel continuous forward motion
             const seqP = clamp(
-              (currentProgress - TRANSITION_1_END) / (TUNNEL_END - TRANSITION_1_END),
+              (currentProgress - HERO_END) / (TUNNEL_END - crossBlendRange - HERO_END),
               0,
               1,
             )
-            renderBlendedSequence(
-              ctx,
-              tunnelImagesRef.current,
-              seqP,
-              canvas.width,
-              canvas.height,
-            )
-          } else if (currentProgress < TRANSITION_2_END) {
-            // Transition 2: Tunnel to Clouds (cross-blend + white wipe)
-            const transP = clamp(
-              (currentProgress - TUNNEL_END) / (TRANSITION_2_END - TUNNEL_END),
-              0,
-              1,
-            )
-            const lastTunnel = getLoadedFrame(
-              tunnelImagesRef.current,
-              tunnelImagesRef.current.length - 1,
-            )
+            renderBlendedSequence(ctx, tunnelImagesRef.current, seqP, canvas.width, canvas.height)
+          } else if (currentProgress <= TUNNEL_END) {
+            // Seamless Overlap: Tunnel ending seamlessly cross-fades into Clouds starting
+            // (Eliminated the dead-zone pause at Next-Gen Web Architecture)
+            const blendRatio = (currentProgress - (TUNNEL_END - crossBlendRange)) / crossBlendRange
+            renderBlendedSequence(ctx, tunnelImagesRef.current, 1, canvas.width, canvas.height)
             const firstClouds = getLoadedFrame(cloudsImagesRef.current, 0)
-
-            if (lastTunnel) {
-              drawCover(ctx, lastTunnel, canvas.width, canvas.height, 1)
-            }
-            if (firstClouds && transP > 0.01) {
-              drawCover(ctx, firstClouds, canvas.width, canvas.height, transP)
+            if (firstClouds) {
+              drawCover(ctx, firstClouds, canvas.width, canvas.height, blendRatio)
             }
           } else {
-            // Sequence 3: Clouds with smooth inter-frame blending
-            const seqP = clamp(
-              (currentProgress - TRANSITION_2_END) / (1 - TRANSITION_2_END),
-              0,
-              1,
-            )
-            renderBlendedSequence(
-              ctx,
-              cloudsImagesRef.current,
-              seqP,
-              canvas.width,
-              canvas.height,
-            )
+            // Sequence 3: Clouds continuous upward flight to climax
+            const seqP = clamp((currentProgress - TUNNEL_END) / (1 - TUNNEL_END), 0, 1)
+            renderBlendedSequence(ctx, cloudsImagesRef.current, seqP, canvas.width, canvas.height)
           }
         }
       }
 
-      // Render Snowfall Particle System (gentle looping snow)
+      // Render Atmospheric Soft Clouds & Snowfall Particle System (alive icy atmospheric loop)
       const snowCanvas = snowCanvasRef.current
       if (snowCanvas) {
         const snowCtx = snowCanvas.getContext('2d')
@@ -477,6 +456,51 @@ function AppComplete() {
             snowflakesRef.current = createSnowflakes(count, snowCanvas.width, snowCanvas.height)
           }
 
+          if (cloudsRef.current.length === 0) {
+            cloudsRef.current = createAtmosphericMists(isMobile ? 3 : 5, snowCanvas.width, snowCanvas.height)
+          }
+
+          // 1. Subtle, living atmospheric cloud/mist layers (barely visible, soft moving volume)
+          const mists = cloudsRef.current
+          for (let m = 0; m < mists.length; m++) {
+            const mist = mists[m]
+            mist.sway += mist.swaySpeed
+            mist.x += mist.speedX
+
+            // Seamless toroidal wrap across screen
+            if (mist.x - mist.radiusX > snowCanvas.width) {
+              mist.x = -mist.radiusX
+              mist.y = Math.random() * snowCanvas.height * 0.9
+            }
+
+            const currentMistOpacity = mist.maxOpacity * (0.85 + Math.sin(mist.sway) * 0.15)
+            const mistY = mist.y + Math.sin(mist.sway * 0.8) * 12
+
+            const grad = snowCtx.createRadialGradient(
+              mist.x,
+              mistY,
+              0,
+              mist.x,
+              mistY,
+              mist.radiusX,
+            )
+            grad.addColorStop(0, `rgba(235, 248, 255, ${currentMistOpacity.toFixed(4)})`)
+            grad.addColorStop(0.45, `rgba(215, 240, 255, ${(currentMistOpacity * 0.6).toFixed(4)})`)
+            grad.addColorStop(0.8, `rgba(195, 230, 255, ${(currentMistOpacity * 0.2).toFixed(4)})`)
+            grad.addColorStop(1, 'rgba(255, 255, 255, 0)')
+
+            snowCtx.save()
+            snowCtx.beginPath()
+            // Scale transform to draw an organic wide ellipse
+            snowCtx.translate(mist.x, mistY)
+            snowCtx.scale(1, mist.radiusY / mist.radiusX)
+            snowCtx.arc(0, 0, mist.radiusX, 0, Math.PI * 2)
+            snowCtx.fillStyle = grad
+            snowCtx.fill()
+            snowCtx.restore()
+          }
+
+          // 2. Snowflakes
           const flakes = snowflakesRef.current
           // Soft dynamic drift boost on scroll
           const scrollBoost = Math.min(Math.abs(delta) * 14, 2.2)
@@ -505,37 +529,30 @@ function AppComplete() {
         }
       }
 
-      // Update White Transition Overlay directly on DOM
+      // Update Barfani Sliding White Transition
+      // Glides up dynamically during stage shifts (Rocket -> Tunnel, Tunnel -> Clouds)
       if (whiteRef.current) {
         let whiteOpacity = 0
-        let whiteY = '100%'
+        let whiteY = 110 // start off-screen below (+110%)
 
-        if (currentProgress > HERO_END && currentProgress < TRANSITION_1_END) {
-          const transP = (currentProgress - HERO_END) / (TRANSITION_1_END - HERO_END)
-          if (transP <= 0.5) {
-            const wipeIn = transP / 0.5
-            whiteOpacity = wipeIn * 0.95
-            whiteY = `${(1 - wipeIn) * 100}%`
-          } else {
-            const wipeOut = (transP - 0.5) / 0.5
-            whiteOpacity = (1 - wipeOut) * 0.95
-            whiteY = '0%'
-          }
-        } else if (currentProgress > TUNNEL_END && currentProgress < TRANSITION_2_END) {
-          const transP = (currentProgress - TUNNEL_END) / (TRANSITION_2_END - TUNNEL_END)
-          if (transP <= 0.5) {
-            const wipeIn = transP / 0.5
-            whiteOpacity = wipeIn * 0.95
-            whiteY = `${(1 - wipeIn) * 100}%`
-          } else {
-            const wipeOut = (transP - 0.5) / 0.5
-            whiteOpacity = (1 - wipeOut) * 0.95
-            whiteY = '0%'
-          }
+        const sweepRange = 0.055
+
+        // Transition 1 sweep (around HERO_END 0.32)
+        if (Math.abs(currentProgress - HERO_END) <= sweepRange) {
+          const progressInSweep = (currentProgress - (HERO_END - sweepRange)) / (sweepRange * 2)
+          // Progress from 0 to 1 -> sweep from translateY(110%) to translateY(-110%)
+          whiteY = 110 - progressInSweep * 220
+          whiteOpacity = Math.sin(progressInSweep * Math.PI) * 0.92
+        }
+        // Transition 2 sweep (around TUNNEL_END 0.68)
+        else if (Math.abs(currentProgress - TUNNEL_END) <= sweepRange) {
+          const progressInSweep = (currentProgress - (TUNNEL_END - sweepRange)) / (sweepRange * 2)
+          whiteY = 110 - progressInSweep * 220
+          whiteOpacity = Math.sin(progressInSweep * Math.PI) * 0.92
         }
 
         whiteRef.current.style.opacity = whiteOpacity.toFixed(3)
-        whiteRef.current.style.transform = `translateY(${whiteY})`
+        whiteRef.current.style.transform = `translateY(${whiteY.toFixed(1)}%)`
       }
 
       // Update Header: Remains permanently visible and interactive for full frame navigation
