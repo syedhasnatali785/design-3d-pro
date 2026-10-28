@@ -5,7 +5,7 @@ import './App.css'
 const LOADER_MESSAGES = [
   'Welcome to DevCore',
   'We are loading DevCore...',
-  'Ham kia services provide krte hain?',
+  'What services we provide?',
   'Cloud POS Web Apps & Custom Systems',
   'Architecting Next-Gen Web Architecture...',
 ]
@@ -88,6 +88,8 @@ const TRANSITION_STORIES = [
     href: 'mailto:hello@devcore.tech?subject=Project%20Inquiry%20-%20POS%20%26%20Software%20Systems',
   },
 ]
+
+const SECTION_TARGETS = [0.22, 0.36, 0.56, 0.74, 0.95]
 
 function clamp(value, min, max) {
   return Math.min(Math.max(value, min), max)
@@ -201,12 +203,32 @@ function AppComplete() {
   const [isLoading, setIsLoading] = useState(true)
   const [loadPercent, setLoadPercent] = useState(0)
   const [loaderMsgIndex, setLoaderMsgIndex] = useState(0)
+  const [displayedText, setDisplayedText] = useState('')
 
+  // Realistic character typing effect for loader lines
+  useEffect(() => {
+    if (!isLoading) return
+    const currentFullText = LOADER_MESSAGES[loaderMsgIndex] || ''
+    let charIndex = 0
+    setDisplayedText('')
+
+    const typeInterval = setInterval(() => {
+      charIndex++
+      setDisplayedText(currentFullText.slice(0, charIndex))
+      if (charIndex >= currentFullText.length) {
+        clearInterval(typeInterval)
+      }
+    }, 42)
+
+    return () => clearInterval(typeInterval)
+  }, [loaderMsgIndex, isLoading])
+
+  // Cycle to next loader phrase every 2.4s
   useEffect(() => {
     if (!isLoading) return
     const timer = setInterval(() => {
       setLoaderMsgIndex((prev) => (prev + 1) % LOADER_MESSAGES.length)
-    }, 2200)
+    }, 2400)
     return () => clearInterval(timer)
   }, [isLoading])
   const [activeSection, setActiveSection] = useState('home')
@@ -228,9 +250,16 @@ function AppComplete() {
   const whiteRef = useRef(null)
   const heroCopyRef = useRef(null)
   const launchBtnRef = useRef(null)
+  const nextSectionBtnRef = useRef(null)
+  const currentProgressRef = useRef(0)
   const scrollCueRef = useRef(null)
   const servicesRef = useRef(null)
+  const servicesHeadingRef = useRef(null)
+  const servicesTaglineRef = useRef(null)
   const storyRefs = useRef([])
+  const storyTitleRefs = useRef([])
+  const storyTaglineRefs = useRef([])
+  const activeTypedSectionRef = useRef({})
   const mouseRef = useRef({ x: 0, y: 0, targetX: 0, targetY: 0 })
 
   const heroImagesRef = useRef([])
@@ -268,6 +297,17 @@ function AppComplete() {
       top: progress * maxScroll,
       behavior: 'smooth',
     })
+  }
+
+  // Handle mini circle down-arrow: advance to next section milestone
+  const handleNextSectionClick = () => {
+    const cur = currentProgressRef.current || 0
+    const nextTarget = SECTION_TARGETS.find((target) => target > cur + 0.05)
+    if (nextTarget !== undefined) {
+      scrollToProgress(nextTarget)
+    } else {
+      scrollToProgress(0.95)
+    }
   }
 
   // Trigger Countdown 3 -> 2 -> 1 -> Launch with Minor Screen Shake
@@ -431,6 +471,8 @@ function AppComplete() {
       if (absDelta < 0.000008) {
         currentProgress = targetProgress
       }
+
+      currentProgressRef.current = currentProgress
 
       // Smooth mouse lerp for 3D tilts & micro camera sway
       mouseRef.current.x += (mouseRef.current.targetX - mouseRef.current.x) * 0.05
@@ -709,6 +751,33 @@ function AppComplete() {
         servicesRef.current.style.opacity = servOpacity.toFixed(3)
         servicesRef.current.style.transform = `translateX(-50%) translateY(${servY.toFixed(1)}px) rotateX(${tiltX.toFixed(2)}deg) rotateY(${tiltY.toFixed(2)}deg)`
         servicesRef.current.style.display = servOpacity > 0.005 ? 'flex' : 'none'
+
+        // Typing effect for Services Heading & Left-to-Right Tagline Fade
+        if (servOpacity > 0.15) {
+          if (!activeTypedSectionRef.current['services']) {
+            activeTypedSectionRef.current['services'] = true
+            const fullHeading = 'POS & SOFTWARE SYSTEMS'
+            if (servicesHeadingRef.current) {
+              let charIdx = 0
+              servicesHeadingRef.current.textContent = ''
+              const iv = setInterval(() => {
+                charIdx++
+                if (servicesHeadingRef.current) {
+                  servicesHeadingRef.current.textContent = fullHeading.slice(0, charIdx)
+                }
+                if (charIdx >= fullHeading.length) clearInterval(iv)
+              }, 38)
+            }
+          }
+          if (servicesTaglineRef.current) {
+            servicesTaglineRef.current.classList.add('is-revealed')
+          }
+        } else if (servOpacity <= 0.01) {
+          activeTypedSectionRef.current['services'] = false
+          if (servicesTaglineRef.current) {
+            servicesTaglineRef.current.classList.remove('is-revealed')
+          }
+        }
       }
 
       // Update Transition Stories Cards (data-driven with icy 3D tilts and atmospheric depth)
@@ -743,6 +812,37 @@ function AppComplete() {
         el.style.opacity = op.toFixed(3)
         el.style.transform = `translate(-50%, -50%) translateY(${y.toFixed(1)}px) rotateX(${tiltX.toFixed(2)}deg) rotateY(${tiltY.toFixed(2)}deg)`
         el.style.display = op > 0.005 ? 'flex' : 'none'
+
+        // Typing effect for Section Title & Left-to-Right Tagline Fade
+        const storyKey = `story_${idx}`
+        if (op > 0.2) {
+          if (!activeTypedSectionRef.current[storyKey]) {
+            activeTypedSectionRef.current[storyKey] = true
+            const titleEl = storyTitleRefs.current[idx]
+            if (titleEl) {
+              const fullTitle = story.title
+              let c = 0
+              titleEl.textContent = ''
+              const iv = setInterval(() => {
+                c++
+                if (titleEl) {
+                  titleEl.textContent = fullTitle.slice(0, c)
+                }
+                if (c >= fullTitle.length) clearInterval(iv)
+              }, 34)
+            }
+          }
+          const taglineEl = storyTaglineRefs.current[idx]
+          if (taglineEl) {
+            taglineEl.classList.add('is-revealed')
+          }
+        } else if (op <= 0.01) {
+          activeTypedSectionRef.current[storyKey] = false
+          const taglineEl = storyTaglineRefs.current[idx]
+          if (taglineEl) {
+            taglineEl.classList.remove('is-revealed')
+          }
+        }
       })
 
       // Update Footer
@@ -750,6 +850,20 @@ function AppComplete() {
         const fp = clamp((currentProgress - 0.85) / 0.13, 0, 1)
         footerRef.current.style.opacity = fp.toFixed(3)
         footerRef.current.style.transform = `translateY(${(1 - fp) * 80}px)`
+      }
+
+      // Update Mini Next Section Arrow Button (Strictly HIDDEN in Hero Section < 0.16)
+      if (nextSectionBtnRef.current) {
+        if (currentProgress >= 0.16 && currentProgress < 0.94) {
+          const fadeIn = clamp((currentProgress - 0.16) / 0.05, 0, 1)
+          nextSectionBtnRef.current.style.opacity = fadeIn.toFixed(3)
+          nextSectionBtnRef.current.style.pointerEvents = fadeIn > 0.5 ? 'auto' : 'none'
+          nextSectionBtnRef.current.style.transform = `translateX(-50%) translateY(${(1 - fadeIn) * 14}px)`
+        } else {
+          nextSectionBtnRef.current.style.opacity = '0'
+          nextSectionBtnRef.current.style.pointerEvents = 'none'
+          nextSectionBtnRef.current.style.transform = 'translateX(-50%) translateY(14px)'
+        }
       }
 
       animationFrameId = window.requestAnimationFrame(tick)
@@ -777,8 +891,9 @@ function AppComplete() {
         aria-busy={isLoading}
       >
         <div className="loader-single-line-wrapper">
-          <p key={loaderMsgIndex} className="loader-shimmer-single-line">
-            {LOADER_MESSAGES[loaderMsgIndex]}
+          <p className="loader-shimmer-single-line">
+            <span>{displayedText}</span>
+            <span className="typing-cursor" aria-hidden="true" />
           </p>
         </div>
       </div>
@@ -804,11 +919,10 @@ function AppComplete() {
             >
               <button
                 type="button"
-                className={`topnav-btn topnav-btn--dropdown ${
-                  activeSection === 'services' || activeSection === 'pos' || activeSection === 'software'
+                className={`topnav-btn topnav-btn--dropdown ${activeSection === 'services' || activeSection === 'pos' || activeSection === 'software'
                     ? 'is-active'
                     : ''
-                }`}
+                  }`}
                 onClick={() => {
                   setServicesOpen((prev) => !prev)
                   scrollToProgress(0.22)
@@ -949,16 +1063,19 @@ function AppComplete() {
                   {countdown === null
                     ? 'Power Launch'
                     : countdown === 'IGNITION'
-                    ? 'Ignition'
-                    : `Countdown ${countdown}`}
+                      ? 'Ignition'
+                      : `Countdown ${countdown}`}
                 </span>
               </button>
             </div>
 
             <div className="hero-services-block" ref={servicesRef} aria-hidden={true} style={{ opacity: 0, display: 'none' }}>
               <div className="hero-services-eyebrow">OUR SERVICES</div>
-              <h2 className="hero-services-heading">POS & SOFTWARE SYSTEMS</h2>
-              <p className="hero-services-tagline">
+              <h2 className="hero-services-heading">
+                <span ref={servicesHeadingRef}>POS & SOFTWARE SYSTEMS</span>
+                <span className="section-typing-cursor" aria-hidden="true" />
+              </h2>
+              <p className="hero-services-tagline" ref={servicesTaglineRef}>
                 We provide services like POS Web apps and custom software systems tailored for enterprise growth.
               </p>
             </div>
@@ -976,8 +1093,24 @@ function AppComplete() {
                   <span className="story-badge-dot" aria-hidden="true" />
                   <span>{story.badge}</span>
                 </div>
-                <h2 className="story-title">{story.title}</h2>
-                <p className="story-tagline">{story.tagline}</p>
+                <h2 className="story-title">
+                  <span
+                    ref={(el) => {
+                      storyTitleRefs.current[index] = el
+                    }}
+                  >
+                    {story.title}
+                  </span>
+                  <span className="section-typing-cursor" aria-hidden="true" />
+                </h2>
+                <p
+                  className="story-tagline"
+                  ref={(el) => {
+                    storyTaglineRefs.current[index] = el
+                  }}
+                >
+                  {story.tagline}
+                </p>
                 {story.cta && (
                   story.href ? (
                     <a
@@ -1000,6 +1133,32 @@ function AppComplete() {
             ))}
           </div>
         </div>
+
+        {/* Floating Mini Circle Next Section Arrow Button (Strictly Hidden in Hero) */}
+        <button
+          ref={nextSectionBtnRef}
+          type="button"
+          className="mini-next-section-btn"
+          onClick={handleNextSectionClick}
+          aria-label="Scroll to next section"
+          title="Next Section"
+          style={{ opacity: 0, pointerEvents: 'none' }}
+        >
+          <svg
+            className="mini-arrow-svg"
+            width="17"
+            height="17"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden="true"
+          >
+            <path d="M6 9l6 6 6-6" />
+          </svg>
+        </button>
 
         <footer className="bottombar" ref={footerRef} style={{ opacity: 0, transform: 'translateY(80px)' }}>
           <div className="footer-shell">
