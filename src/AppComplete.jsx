@@ -12,7 +12,7 @@ const LOADER_MESSAGES = [
 
 // Unified Hero Sequence for both Desktop & Mobile
 const HERO_FRAMES = Object.entries(
-  import.meta.glob('../Rocket_launches_from_icy_land_20261027031051_frames/**/*.png', {
+  import.meta.glob('../Rocket_launches_from_icy_land_20261027031051_frames/**/*.webp', {
     eager: true,
     import: 'default',
   }),
@@ -21,7 +21,7 @@ const HERO_FRAMES = Object.entries(
   .map(([, src]) => src)
 
 const TUNNEL_FRAMES = Object.entries(
-  import.meta.glob('../Camera_moves_through_icy_tunnel_20261027032841_frames/**/*.png', {
+  import.meta.glob('../Camera_moves_through_icy_tunnel_20261027032841_frames/**/*.webp', {
     eager: true,
     import: 'default',
   }),
@@ -30,7 +30,7 @@ const TUNNEL_FRAMES = Object.entries(
   .map(([, src]) => src)
 
 const CLOUDS_FRAMES = Object.entries(
-  import.meta.glob('../Camera_moves_up_to_clouds_20261027224013_frames/**/*.png', {
+  import.meta.glob('../Camera_moves_up_to_clouds_20261027224013_frames/**/*.webp', {
     eager: true,
     import: 'default',
   }),
@@ -121,7 +121,7 @@ function getLoadedFrame(imageArray, targetIndex) {
 }
 
 function drawCover(ctx, img, canvasWidth, canvasHeight, opacity = 1) {
-  if (!img || !img.complete || img.naturalWidth === 0) return
+  if (!img || !img.complete || img.naturalWidth === 0) return false
 
   const imgW = img.naturalWidth
   const imgH = img.naturalHeight
@@ -139,11 +139,12 @@ function drawCover(ctx, img, canvasWidth, canvasHeight, opacity = 1) {
   } else {
     ctx.drawImage(img, offsetX, offsetY, drawW, drawH)
   }
+  return true
 }
 
 // Optical frame blending: smoothly crossfades between adjacent frames
 function renderBlendedSequence(ctx, images, seqProgress, canvasWidth, canvasHeight) {
-  if (!images || images.length === 0) return
+  if (!images || images.length === 0) return false
   const total = images.length
   const floatIndex = clamp(seqProgress * (total - 1), 0, total - 1)
   const baseIndex = Math.floor(floatIndex)
@@ -153,13 +154,16 @@ function renderBlendedSequence(ctx, images, seqProgress, canvasWidth, canvasHeig
   const imgA = getLoadedFrame(images, baseIndex)
   const imgB = getLoadedFrame(images, nextIndex)
 
-  if (imgA) {
-    drawCover(ctx, imgA, canvasWidth, canvasHeight, 1)
+  let drawn = false
+  if (imgA && drawCover(ctx, imgA, canvasWidth, canvasHeight, 1)) {
+    drawn = true
   }
 
   if (imgB && imgB !== imgA && fraction > 0.005) {
     drawCover(ctx, imgB, canvasWidth, canvasHeight, fraction)
   }
+
+  return drawn
 }
 
 // Ultra-subtle, organic atmospheric mist / cloud puff generator
@@ -236,9 +240,11 @@ function AppComplete() {
   const [servicesOpen, setServicesOpen] = useState(false)
   const dropdownRef = useRef(null)
 
-  // Launch button countdown state: null | 3 | 2 | 1 | 'IGNITION'
-  const [countdown, setCountdown] = useState(null)
-  const countdownTimerRef = useRef(null)
+  // Rocket launch & thruster firing states: click or hold to launch
+  const [isFiring, setIsFiring] = useState(false)
+  const isFiringRef = useRef(false)
+  const holdStartTimeRef = useRef(0)
+  const holdRafRef = useRef(null)
   const shakeIntensityRef = useRef(0)
 
   const headerRef = useRef(null)
@@ -250,7 +256,6 @@ function AppComplete() {
   const whiteRef = useRef(null)
   const heroCopyRef = useRef(null)
   const launchBtnRef = useRef(null)
-  const nextSectionBtnRef = useRef(null)
   const currentProgressRef = useRef(0)
   const scrollCueRef = useRef(null)
   const servicesRef = useRef(null)
@@ -265,6 +270,8 @@ function AppComplete() {
   const heroImagesRef = useRef([])
   const tunnelImagesRef = useRef([])
   const cloudsImagesRef = useRef([])
+  const forceRedrawRef = useRef(true)
+  const hasDrawnValidFrameRef = useRef(false)
 
   // Close tiny services menu on click outside
   useEffect(() => {
@@ -288,58 +295,100 @@ function AppComplete() {
   }, [])
 
   // Smooth scroll directly to frame section
-  const scrollToProgress = (progress) => {
+  const scrollToProgress = (progress, duration = 1600) => {
     const maxScroll = Math.max(
       document.documentElement.scrollHeight - window.innerHeight,
       1,
     )
-    window.scrollTo({
-      top: progress * maxScroll,
-      behavior: 'smooth',
-    })
+    const startScroll = window.scrollY
+    const targetScroll = progress * maxScroll
+    const distance = targetScroll - startScroll
+    const startTime = performance.now()
+
+    const easeInOutCubic = (t) =>
+      t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2
+
+    const step = (now) => {
+      const elapsed = now - startTime
+      const t = Math.min(elapsed / duration, 1)
+      window.scrollTo(0, startScroll + distance * easeInOutCubic(t))
+      if (t < 1) {
+        requestAnimationFrame(step)
+      }
+    }
+    requestAnimationFrame(step)
   }
 
-  // Handle mini circle down-arrow: advance to next section milestone
-  const handleNextSectionClick = () => {
-    const cur = currentProgressRef.current || 0
-    const nextTarget = SECTION_TARGETS.find((target) => target > cur + 0.05)
-    if (nextTarget !== undefined) {
-      scrollToProgress(nextTarget)
-    } else {
-      scrollToProgress(0.95)
+  const launchRocketToServices = () => {
+    shakeIntensityRef.current = 1.6
+    scrollToProgress(0.22, 1800)
+  }
+
+  // Handle click or press & hold
+  const handlePointerDown = (e) => {
+    e?.stopPropagation()
+    isFiringRef.current = true
+    setIsFiring(true)
+    holdStartTimeRef.current = performance.now()
+    shakeIntensityRef.current = 1.3
+
+    const maxScroll = Math.max(
+      document.documentElement.scrollHeight - window.innerHeight,
+      1,
+    )
+
+    let velocity = 3 // propulsion acceleration
+    const boostLoop = () => {
+      if (!isFiringRef.current) return
+
+      // Accelerate while holding
+      velocity = Math.min(velocity + 1.2, 42)
+      shakeIntensityRef.current = 1.4
+
+      const nextScroll = Math.min(window.scrollY + velocity, maxScroll * 0.28)
+      window.scrollTo(0, nextScroll)
+
+      if (window.scrollY < maxScroll * 0.28) {
+        holdRafRef.current = requestAnimationFrame(boostLoop)
+      } else {
+        isFiringRef.current = false
+        setIsFiring(false)
+      }
+    }
+
+    holdRafRef.current = requestAnimationFrame(boostLoop)
+  }
+
+  const handlePointerUp = (e) => {
+    e?.stopPropagation()
+    if (!isFiringRef.current && !isFiring) return
+    const holdDuration = performance.now() - holdStartTimeRef.current
+    isFiringRef.current = false
+    setIsFiring(false)
+    if (holdRafRef.current) {
+      cancelAnimationFrame(holdRafRef.current)
+    }
+
+    // If it was a quick click / tap (< 250ms), auto-launch rocket to Services
+    if (holdDuration < 250) {
+      launchRocketToServices()
     }
   }
 
-  // Trigger Countdown 3 -> 2 -> 1 -> Launch with Minor Screen Shake
-  const handleLaunchClick = (e) => {
-    e?.stopPropagation()
-    if (countdown !== null) return
-    setCountdown(3)
-
-    countdownTimerRef.current = setTimeout(() => {
-      setCountdown(2)
-      countdownTimerRef.current = setTimeout(() => {
-        setCountdown(1)
-        countdownTimerRef.current = setTimeout(() => {
-          setCountdown('IGNITION')
-          // Trigger slight minor launch rocket shake
-          shakeIntensityRef.current = 1.2
-
-          // Smoothly scroll to services section
-          scrollToProgress(0.22)
-
-          countdownTimerRef.current = setTimeout(() => {
-            setCountdown(null)
-          }, 2400)
-        }, 900)
-      }, 900)
-    }, 900)
+  const handlePointerCancel = () => {
+    if (isFiringRef.current) {
+      isFiringRef.current = false
+      setIsFiring(false)
+      if (holdRafRef.current) {
+        cancelAnimationFrame(holdRafRef.current)
+      }
+    }
   }
 
-  // Clean up timer on unmount
+  // Clean up animation on unmount
   useEffect(() => {
     return () => {
-      if (countdownTimerRef.current) clearTimeout(countdownTimerRef.current)
+      if (holdRafRef.current) cancelAnimationFrame(holdRafRef.current)
     }
   }, [])
 
@@ -361,6 +410,7 @@ function AppComplete() {
         setTimeout(() => {
           if (!isCancelled) {
             setIsLoading(false)
+            forceRedrawRef.current = true
           }
         }, 250) // subtle smooth transition delay
       }
@@ -372,6 +422,7 @@ function AppComplete() {
         img.src = url
 
         const handleComplete = () => {
+          forceRedrawRef.current = true
           // img.decode() forces GPU to decompress image immediately, eliminating first-scroll stutter/lag
           if (typeof img.decode === 'function') {
             img.decode().then(updateProgress).catch(updateProgress)
@@ -398,6 +449,7 @@ function AppComplete() {
     const fallbackTimeout = setTimeout(() => {
       if (!isCancelled) {
         setIsLoading(false)
+        forceRedrawRef.current = true
       }
     }, 7000)
 
@@ -412,6 +464,8 @@ function AppComplete() {
     let targetProgress = 0
     let currentProgress = 0
     let animationFrameId = null
+    let lastRenderedProgress = -1
+    let forceCanvasRedraw = true
 
     const handleScroll = () => {
       const maxScroll = Math.max(
@@ -423,13 +477,15 @@ function AppComplete() {
 
     const handleResize = () => {
       handleScroll()
+      forceCanvasRedraw = true
       resizeCanvas()
     }
 
     const resizeCanvas = () => {
       const width = window.innerWidth
       const height = window.innerHeight
-      const dpr = Math.min(window.devicePixelRatio || 1, 2)
+      // Clamp DPR to 1.25 to prevent 4K fill-rate penalty while keeping razor-sharp visuals
+      const dpr = Math.min(window.devicePixelRatio || 1, 1.25)
       const targetW = Math.round(width * dpr)
       const targetH = Math.round(height * dpr)
 
@@ -438,6 +494,7 @@ function AppComplete() {
         if (canvas.width !== targetW || canvas.height !== targetH) {
           canvas.width = targetW
           canvas.height = targetH
+          forceCanvasRedraw = true
         }
       }
 
@@ -447,7 +504,7 @@ function AppComplete() {
           snowCanvas.width = targetW
           snowCanvas.height = targetH
           const isMobileNow = width <= 768 || height > width
-          const count = isMobileNow ? 38 : 72
+          const count = isMobileNow ? 32 : 55
           snowflakesRef.current = createSnowflakes(count, targetW, targetH)
           cloudsRef.current = createAtmosphericMists(isMobileNow ? 3 : 5, targetW, targetH)
         }
@@ -508,51 +565,71 @@ function AppComplete() {
         // scale 1.04 provides comfortable margin so edges never show black border during shake
         canvas.style.transform = `scale(1.042) translate3d(${camTiltX.toFixed(2)}px, ${(camTiltY + breathe).toFixed(2)}px, 0) rotate(${handheldRot.toFixed(3)}deg)`
 
-        const ctx = canvas.getContext('2d')
-        if (ctx) {
-          ctx.imageSmoothingEnabled = true
-          ctx.imageSmoothingQuality = 'high'
+        // Dirty-checking: only execute expensive bitmap draw calls when scroll moves, on resize, or before first valid draw
+        const progressDiff = Math.abs(currentProgress - lastRenderedProgress)
+        const shouldRedraw =
+          progressDiff > 0.0001 ||
+          forceCanvasRedraw ||
+          forceRedrawRef.current ||
+          !hasDrawnValidFrameRef.current
 
-          // Unified Hero Sequence for both Desktop & Mobile
-          const activeHero = heroImagesRef.current
+        if (shouldRedraw) {
 
-          // Seamless direct playback across 3 continuous sequence stages
-          // No freeze/dead-zone pauses: sequence 1 -> sequence 2 -> sequence 3 flow smoothly
-          const crossBlendRange = 0.04 // Soft cinematic cross-dissolve overlap
+          const ctx = canvas.getContext('2d')
+          if (ctx) {
+            ctx.imageSmoothingEnabled = true
+            ctx.imageSmoothingQuality = 'high'
 
-          if (currentProgress < HERO_END - crossBlendRange) {
-            // Sequence 1: Rocket Launch
-            const seqP = clamp(currentProgress / (HERO_END - crossBlendRange), 0, 1)
-            renderBlendedSequence(ctx, activeHero, seqP, canvas.width, canvas.height)
-          } else if (currentProgress <= HERO_END) {
-            // Seamless Overlap: Rocket Launch ending gently cross-fades into Tunnel starting
-            const blendRatio = (currentProgress - (HERO_END - crossBlendRange)) / crossBlendRange
-            renderBlendedSequence(ctx, activeHero, 1, canvas.width, canvas.height)
-            const firstTunnel = getLoadedFrame(tunnelImagesRef.current, 0)
-            if (firstTunnel) {
-              drawCover(ctx, firstTunnel, canvas.width, canvas.height, blendRatio)
+            // Unified Hero Sequence for both Desktop & Mobile
+            const activeHero = heroImagesRef.current
+
+            // Seamless direct playback across 3 continuous sequence stages
+            // No freeze/dead-zone pauses: sequence 1 -> sequence 2 -> sequence 3 flow smoothly
+            const crossBlendRange = 0.04 // Soft cinematic cross-dissolve overlap
+
+            let didDraw = false
+            if (currentProgress < HERO_END - crossBlendRange) {
+              // Sequence 1: Rocket Launch
+              const seqP = clamp(currentProgress / (HERO_END - crossBlendRange), 0, 1)
+              didDraw = renderBlendedSequence(ctx, activeHero, seqP, canvas.width, canvas.height)
+            } else if (currentProgress <= HERO_END) {
+              // Seamless Overlap: Rocket Launch ending gently cross-fades into Tunnel starting
+              const blendRatio = (currentProgress - (HERO_END - crossBlendRange)) / crossBlendRange
+              didDraw = renderBlendedSequence(ctx, activeHero, 1, canvas.width, canvas.height)
+              const firstTunnel = getLoadedFrame(tunnelImagesRef.current, 0)
+              if (firstTunnel) {
+                drawCover(ctx, firstTunnel, canvas.width, canvas.height, blendRatio)
+                didDraw = true
+              }
+            } else if (currentProgress < TUNNEL_END - crossBlendRange) {
+              // Sequence 2: Ice Tunnel continuous forward motion
+              const seqP = clamp(
+                (currentProgress - HERO_END) / (TUNNEL_END - crossBlendRange - HERO_END),
+                0,
+                1,
+              )
+              didDraw = renderBlendedSequence(ctx, tunnelImagesRef.current, seqP, canvas.width, canvas.height)
+            } else if (currentProgress <= TUNNEL_END) {
+              // Seamless Overlap: Tunnel ending seamlessly cross-fades into Clouds starting
+              const blendRatio = (currentProgress - (TUNNEL_END - crossBlendRange)) / crossBlendRange
+              didDraw = renderBlendedSequence(ctx, tunnelImagesRef.current, 1, canvas.width, canvas.height)
+              const firstClouds = getLoadedFrame(cloudsImagesRef.current, 0)
+              if (firstClouds) {
+                drawCover(ctx, firstClouds, canvas.width, canvas.height, blendRatio)
+                didDraw = true
+              }
+            } else {
+              // Sequence 3: Clouds continuous upward flight to climax
+              const seqP = clamp((currentProgress - TUNNEL_END) / (1 - TUNNEL_END), 0, 1)
+              didDraw = renderBlendedSequence(ctx, cloudsImagesRef.current, seqP, canvas.width, canvas.height)
             }
-          } else if (currentProgress < TUNNEL_END - crossBlendRange) {
-            // Sequence 2: Ice Tunnel continuous forward motion
-            const seqP = clamp(
-              (currentProgress - HERO_END) / (TUNNEL_END - crossBlendRange - HERO_END),
-              0,
-              1,
-            )
-            renderBlendedSequence(ctx, tunnelImagesRef.current, seqP, canvas.width, canvas.height)
-          } else if (currentProgress <= TUNNEL_END) {
-            // Seamless Overlap: Tunnel ending seamlessly cross-fades into Clouds starting
-            // (Eliminated the dead-zone pause at Next-Gen Web Architecture)
-            const blendRatio = (currentProgress - (TUNNEL_END - crossBlendRange)) / crossBlendRange
-            renderBlendedSequence(ctx, tunnelImagesRef.current, 1, canvas.width, canvas.height)
-            const firstClouds = getLoadedFrame(cloudsImagesRef.current, 0)
-            if (firstClouds) {
-              drawCover(ctx, firstClouds, canvas.width, canvas.height, blendRatio)
+
+            if (didDraw) {
+              hasDrawnValidFrameRef.current = true
+              lastRenderedProgress = currentProgress
+              forceCanvasRedraw = false
+              forceRedrawRef.current = false
             }
-          } else {
-            // Sequence 3: Clouds continuous upward flight to climax
-            const seqP = clamp((currentProgress - TUNNEL_END) / (1 - TUNNEL_END), 0, 1)
-            renderBlendedSequence(ctx, cloudsImagesRef.current, seqP, canvas.width, canvas.height)
           }
         }
       }
@@ -632,11 +709,17 @@ function AppComplete() {
             if (flake.x < -10) flake.x = snowCanvas.width + 6
             if (flake.x > snowCanvas.width + 10) flake.x = -6
 
+            // Soft crystalline glow without expensive shadowBlur passes
+            if (flake.radius > 2.0) {
+              snowCtx.beginPath()
+              snowCtx.arc(flake.x, flake.y, flake.radius * 1.8, 0, Math.PI * 2)
+              snowCtx.fillStyle = `rgba(186, 230, 253, ${(flake.opacity * 0.28).toFixed(3)})`
+              snowCtx.fill()
+            }
+
             snowCtx.beginPath()
             snowCtx.arc(flake.x, flake.y, flake.radius, 0, Math.PI * 2)
-            snowCtx.fillStyle = `rgba(240, 250, 255, ${flake.opacity})`
-            snowCtx.shadowColor = 'rgba(215, 240, 255, 0.7)'
-            snowCtx.shadowBlur = flake.radius > 2 ? 4 : 1
+            snowCtx.fillStyle = `rgba(240, 250, 255, ${flake.opacity.toFixed(3)})`
             snowCtx.fill()
           }
         }
@@ -664,8 +747,14 @@ function AppComplete() {
           whiteOpacity = Math.sin(progressInSweep * Math.PI) * 0.92
         }
 
-        whiteRef.current.style.opacity = whiteOpacity.toFixed(3)
-        whiteRef.current.style.transform = `translateY(${whiteY.toFixed(1)}%)`
+        if (whiteOpacity > 0.005) {
+          whiteRef.current.style.display = 'block'
+          whiteRef.current.style.opacity = whiteOpacity.toFixed(3)
+          whiteRef.current.style.transform = `translateY(${whiteY.toFixed(1)}%)`
+        } else {
+          whiteRef.current.style.display = 'none'
+          whiteRef.current.style.opacity = '0'
+        }
       }
 
       // Update Header: Remains permanently visible and interactive for full frame navigation
@@ -852,19 +941,6 @@ function AppComplete() {
         footerRef.current.style.transform = `translateY(${(1 - fp) * 80}px)`
       }
 
-      // Update Mini Next Section Arrow Button (Strictly HIDDEN in Hero Section < 0.16)
-      if (nextSectionBtnRef.current) {
-        if (currentProgress >= 0.16 && currentProgress < 0.94) {
-          const fadeIn = clamp((currentProgress - 0.16) / 0.05, 0, 1)
-          nextSectionBtnRef.current.style.opacity = fadeIn.toFixed(3)
-          nextSectionBtnRef.current.style.pointerEvents = fadeIn > 0.5 ? 'auto' : 'none'
-          nextSectionBtnRef.current.style.transform = `translateX(-50%) translateY(${(1 - fadeIn) * 14}px)`
-        } else {
-          nextSectionBtnRef.current.style.opacity = '0'
-          nextSectionBtnRef.current.style.pointerEvents = 'none'
-          nextSectionBtnRef.current.style.transform = 'translateX(-50%) translateY(14px)'
-        }
-      }
 
       animationFrameId = window.requestAnimationFrame(tick)
     }
@@ -920,8 +996,8 @@ function AppComplete() {
               <button
                 type="button"
                 className={`topnav-btn topnav-btn--dropdown ${activeSection === 'services' || activeSection === 'pos' || activeSection === 'software'
-                    ? 'is-active'
-                    : ''
+                  ? 'is-active'
+                  : ''
                   }`}
                 onClick={() => {
                   setServicesOpen((prev) => !prev)
@@ -1030,42 +1106,29 @@ function AppComplete() {
             <div className="hero-launch-wrapper" ref={launchBtnRef}>
               <button
                 type="button"
-                className={`icy-launch-btn icy-launch-btn--circle ${countdown !== null ? 'is-counting' : ''}`}
-                onClick={handleLaunchClick}
-                disabled={countdown !== null}
-                aria-label="Power launch to services"
-                title={countdown === null ? 'Power Launch' : `Countdown: ${countdown}`}
+                className={`icy-launch-btn icy-launch-btn--circle ${isFiring ? 'is-firing' : ''}`}
+                onPointerDown={handlePointerDown}
+                onPointerUp={handlePointerUp}
+                onPointerLeave={handlePointerCancel}
+                onPointerCancel={handlePointerCancel}
+                aria-label="Click or hold to launch rocket"
+                title="Click or hold to launch rocket"
               >
-                {countdown === null ? (
-                  /* Clean, Dead-Centered Power Icon */
-                  <svg
-                    width="26"
-                    height="26"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2.5"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    className="power-svg"
-                  >
-                    <path d="M18.36 6.64a9 9 0 1 1-12.73 0" />
-                    <line x1="12" y1="2" x2="12" y2="12" />
-                  </svg>
-                ) : countdown === 'IGNITION' ? (
-                  <span className="countdown-ignition-dot" />
-                ) : (
-                  <span key={countdown} className="countdown-number countdown-pop">
-                    {countdown}
-                  </span>
-                )}
-                <span className="sr-only">
-                  {countdown === null
-                    ? 'Power Launch'
-                    : countdown === 'IGNITION'
-                      ? 'Ignition'
-                      : `Countdown ${countdown}`}
-                </span>
+                <svg
+                  width="26"
+                  height="26"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className="power-svg"
+                >
+                  <path d="M18.36 6.64a9 9 0 1 1-12.73 0" />
+                  <line x1="12" y1="2" x2="12" y2="12" />
+                </svg>
+                <span className="sr-only">Click or hold to launch rocket</span>
               </button>
             </div>
 
@@ -1134,31 +1197,6 @@ function AppComplete() {
           </div>
         </div>
 
-        {/* Floating Mini Circle Next Section Arrow Button (Strictly Hidden in Hero) */}
-        <button
-          ref={nextSectionBtnRef}
-          type="button"
-          className="mini-next-section-btn"
-          onClick={handleNextSectionClick}
-          aria-label="Scroll to next section"
-          title="Next Section"
-          style={{ opacity: 0, pointerEvents: 'none' }}
-        >
-          <svg
-            className="mini-arrow-svg"
-            width="17"
-            height="17"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2.5"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            aria-hidden="true"
-          >
-            <path d="M6 9l6 6 6-6" />
-          </svg>
-        </button>
 
         <footer className="bottombar" ref={footerRef} style={{ opacity: 0, transform: 'translateY(80px)' }}>
           <div className="footer-shell">
