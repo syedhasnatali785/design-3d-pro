@@ -1,3 +1,6 @@
+/* ========================================================
+   GLOBAL SHIMMER TEXT LOADER (Animated Gradient + Single Shimmering Line)
+   ======================================================== */
 .global-loader {
   position: fixed;
   inset: 0;
@@ -5,11 +8,19 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  /* Barfani Transparent Crystal Theme */
-  background: radial-gradient(circle at 50% 45%, rgba(200, 235, 255, 0.22) 0%, rgba(135, 185, 215, 0.16) 45%, rgba(20, 45, 65, 0.42) 100%);
-  backdrop-filter: blur(28px) saturate(180%);
-  -webkit-backdrop-filter: blur(28px) saturate(180%);
-  transition: opacity 0.65s cubic-bezier(0.16, 1, 0.3, 1), visibility 0.65s cubic-bezier(0.16, 1, 0.3, 1);
+  padding: 1.5rem;
+  /* Deep Living Animated Arctic Glacier Gradient */
+  background: linear-gradient(-45deg,
+      #05131f 0%,
+      #0b233a 25%,
+      #08334c 50%,
+      #0d2033 75%,
+      #061a29 100%);
+  background-size: 350% 350%;
+  animation: loaderGradientShift 8s ease infinite;
+  backdrop-filter: blur(40px) saturate(190%);
+  -webkit-backdrop-filter: blur(40px) saturate(190%);
+  transition: opacity 0.75s cubic-bezier(0.16, 1, 0.3, 1), visibility 0.75s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .global-loader.is-hidden {
@@ -18,112 +29,85 @@
   pointer-events: none;
 }
 
-.loader-card {
+@keyframes loaderGradientShift {
+  0% {
+    background-position: 0% 50%;
+  }
+
+  50% {
+    background-position: 100% 50%;
+  }
+
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+.loader-single-line-wrapper {
   position: relative;
   display: flex;
-  flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 1.1rem;
-  padding: 1.8rem 2.4rem;
-  min-width: 290px;
-  border-radius: 24px;
-  background: rgba(255, 255, 255, 0.12);
-  border: 1px solid rgba(255, 255, 255, 0.35);
-  box-shadow:
-    0 24px 60px rgba(7, 24, 38, 0.25),
-    inset 0 1px 2px rgba(255, 255, 255, 0.65),
-    inset 0 -1px 2px rgba(180, 225, 255, 0.3);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  overflow: hidden;
-}
-
-/* Subtle icy reflection sheen */
-.loader-card::after {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 50%;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.22) 0%, rgba(255, 255, 255, 0) 100%);
-  border-radius: 24px 24px 0 0;
-  pointer-events: none;
-}
-
-.loader-ring {
-  width: 2.2rem;
-  height: 2.2rem;
-  border-radius: 50%;
-  border: 2px solid rgba(255, 255, 255, 0.18);
-  border-top-color: #ffffff;
-  border-right-color: rgba(186, 230, 253, 0.85);
-  filter: drop-shadow(0 0 10px rgba(186, 230, 253, 0.7));
-  animation: loader-spin 0.85s cubic-bezier(0.4, 0, 0.2, 1) infinite;
-}
-
-.loader-text-group {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.45rem;
   text-align: center;
+  max-width: 90vw;
+  min-height: 5.5rem;
+  padding: 0 1rem;
+  user-select: none;
 }
 
-.loader-label {
-  color: #ffffff;
-  font-size: 0.82rem;
-  font-weight: 700;
-  letter-spacing: 0.22rem;
-  text-transform: uppercase;
-  text-shadow: 0 0 12px rgba(186, 230, 253, 0.75), 0 2px 4px rgba(0, 0, 0, 0.25);
+.loader-shimmer-single-line {
+  margin: 0;
+  font-size: clamp(1.75rem, 4.6vw, 3.4rem);
+  font-weight: 750;
+  letter-spacing: 0.05em;
+  text-align: center;
+  line-height: 1.25;
+  background: linear-gradient(90deg,
+      rgba(255, 255, 255, 0.28) 0%,
+      rgba(255, 255, 255, 0.98) 25%,
+      rgba(186, 230, 253, 1) 50%,
+      rgba(255, 255, 255, 0.98) 75%,
+      rgba(255, 255, 255, 0.28) 100%);
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: lineTextShimmer 2.2s ease-in-out infinite, lineFadeIn 0.55s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  filter: drop-shadow(0 0 26px rgba(186, 230, 253, 0.65)) drop-shadow(0 4px 16px rgba(0, 0, 0, 0.6));
 }
 
-.loader-progress {
-  color: rgba(224, 242, 254, 0.9);
-  font-size: 0.74rem;
-  font-weight: 600;
-  letter-spacing: 0.12rem;
-  text-transform: uppercase;
-  text-shadow: 0 1px 6px rgba(0, 0, 0, 0.25);
+@keyframes lineTextShimmer {
+  0% {
+    background-position: -200% 0;
+  }
+
+  100% {
+    background-position: 200% 0;
+  }
 }
 
-/* Icy progress meter bar */
-.loader-bar-track {
-  width: 100%;
-  height: 4px;
-  background: rgba(255, 255, 255, 0.15);
-  border-radius: 999px;
-  overflow: hidden;
-  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.2);
-}
+@keyframes lineFadeIn {
+  0% {
+    opacity: 0;
+    transform: translateY(14px) scale(0.96);
+  }
 
-.loader-bar-fill {
-  height: 100%;
-  background: linear-gradient(90deg, #bae6fd, #ffffff, #7dd3fc);
-  border-radius: 999px;
-  box-shadow: 0 0 10px rgba(186, 230, 253, 0.85);
-  transition: width 0.2s ease-out;
-}
-
-@keyframes loader-spin {
-  to {
-    transform: rotate(360deg);
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
   }
 }
 
 .story-shell {
   position: relative;
-  min-height: 1280vh;
+  min-height: 2400vh;
   background: linear-gradient(180deg, #dff7ff 0%, #d7efff 26%, #d9ebfb 58%, #def7ff 100%);
   opacity: 1;
   transition: opacity 0.4s ease;
 }
 
-@media (max-width: 720px) {
+@media (max-width: 768px) {
   .story-shell {
-    min-height: 1420vh;
+    min-height: 2800vh;
   }
 }
 
@@ -161,8 +145,16 @@
 
 .brand-pill,
 .footer-shell,
-.topnav {
+.topnav,
+.devcore-liquid-nav {
   pointer-events: auto;
+}
+
+.devcore-liquid-nav {
+  box-shadow:
+    0 12px 35px -8px rgba(3, 14, 25, 0.45),
+    0 0 20px rgba(180, 230, 255, 0.2),
+    inset 0 1px 2px rgba(255, 255, 255, 0.85) !important;
 }
 
 /* Kapre wala (Cloth / Silk Fabric Wave) Animation on DevCore Component */
@@ -526,6 +518,17 @@
   background: linear-gradient(180deg, #dff7ff 0%, #8ecaf6 100%);
 }
 
+/* Atmospheric Frost Vignette & Chill Pulse around frame edges */
+.hero-video-stage::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  background: radial-gradient(circle at 50% 50%, transparent 60%, rgba(186, 230, 253, 0.18) 85%, rgba(147, 197, 253, 0.32) 100%);
+  mix-blend-mode: screen;
+}
+
 .hero-video-canvas {
   position: absolute;
   inset: 0;
@@ -533,7 +536,19 @@
   width: 100%;
   height: 100%;
   pointer-events: none;
-  filter: saturate(1.05) contrast(1.02);
+  filter: saturate(1.08) contrast(1.03);
+  will-change: transform;
+  transform-origin: center center;
+}
+
+.three-atmosphere-canvas {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 2;
 }
 
 .snow-overlay-canvas {
@@ -601,6 +616,7 @@
   justify-content: space-between;
   padding: 5.4rem 5vw 3.2rem;
   background: linear-gradient(90deg, rgba(8, 29, 41, 0.16), rgba(8, 29, 41, 0.02) 52%, rgba(8, 29, 41, 0.08));
+  perspective: 1200px;
 }
 
 .hero-copy {
@@ -609,6 +625,7 @@
   height: 100%;
   margin: 0;
   will-change: transform, opacity;
+  transform-style: preserve-3d;
 }
 
 .hero-word {
@@ -625,6 +642,8 @@
   white-space: nowrap;
   pointer-events: none;
   user-select: none;
+  transition: transform 0.15s ease-out;
+  transform-style: preserve-3d;
 }
 
 .hero-word-we {
@@ -704,33 +723,307 @@
 
 .hero-services-tagline {
   margin: 0;
-  max-width: 36rem;
-  font-size: clamp(0.76rem, 1.35vw, 1.02rem);
-  font-weight: 500;
-  letter-spacing: 0.03em;
-  line-height: 1.5;
-  color: #f8fcff;
+  max-width: 48rem;
+  font-size: clamp(1.22rem, 2.3vw, 1.85rem);
+  font-weight: 600;
+  letter-spacing: 0.025em;
+  line-height: 1.55;
+  color: #ffffff;
   text-shadow:
-    0 1px 3px rgba(255, 255, 255, 0.6),
-    0 2px 10px rgba(10, 30, 48, 0.35);
+    0 2px 8px rgba(255, 255, 255, 0.75),
+    0 4px 16px rgba(10, 30, 48, 0.45);
 }
 
-.scroll-cue {
+/* ========================================================
+   ICY RED LAUNCH BUTTON (Frosted Ruby Glass with Ice Sheen)
+   ======================================================== */
+.hero-launch-wrapper {
   position: absolute;
   left: 50%;
-  bottom: 1.6rem;
+  bottom: 2.2vh;
+  /* Placed cleanly underneath "This Way" without overlapping */
   transform: translateX(-50%);
+  z-index: 6;
+  pointer-events: auto;
+  perspective: 800px;
+  will-change: transform, opacity;
+  transition: transform 0.2s cubic-bezier(0.2, 0, 0.2, 1);
+}
+
+.icy-launch-btn {
+  position: relative;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 0.5rem;
-  padding: 0.42rem 1.05rem;
   border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.22);
-  background: rgba(10, 24, 36, 0.28);
-  backdrop-filter: blur(16px);
-  box-shadow: 0 8px 24px rgba(6, 18, 28, 0.16), inset 0 1px 0 rgba(255, 255, 255, 0.25);
-  will-change: opacity, transform;
+  cursor: pointer;
+  /* Crystal Crimson / Ruby Frost Gradient with Lower Opacity (Thora Opacity Low) */
+  background: linear-gradient(135deg,
+      rgba(220, 38, 38, 0.45) 0%,
+      rgba(185, 28, 28, 0.55) 45%,
+      rgba(127, 29, 29, 0.65) 100%);
+  border: 1.5px solid rgba(254, 202, 202, 0.42);
+  color: #ffffff;
+  font-family: inherit;
+  backdrop-filter: blur(24px) saturate(1.3);
+  -webkit-backdrop-filter: blur(24px) saturate(1.3);
+  box-shadow:
+    0 12px 28px rgba(153, 27, 27, 0.25),
+    0 0 18px rgba(248, 113, 113, 0.28),
+    inset 0 1.5px 3px rgba(255, 255, 255, 0.65),
+    inset 0 -1.5px 3px rgba(127, 29, 29, 0.4);
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  overflow: hidden;
+  user-select: none;
+}
+
+/* Circular Power Launch Button Variant - Guaranteed Absolute Centering */
+.icy-launch-btn--circle {
+  position: relative !important;
+  width: 60px !important;
+  height: 60px !important;
+  min-width: 60px !important;
+  max-width: 60px !important;
+  min-height: 60px !important;
+  max-height: 60px !important;
+  padding: 0 !important;
+  margin: 0 auto !important;
+  border-radius: 50% !important;
+  display: block !important;
+  box-sizing: border-box !important;
+  text-align: center;
+}
+
+.icy-launch-btn--circle .power-svg {
+  position: absolute !important;
+  top: 50% !important;
+  left: 50% !important;
+  transform: translate(-50%, -50%) !important;
+  width: 26px !important;
+  height: 26px !important;
+  display: block !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  stroke: #fefefe !important;
+  filter: drop-shadow(0 0 6px rgba(255, 255, 255, 0.8)) drop-shadow(0 2px 4px rgba(0, 0, 0, 0.4)) !important;
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), filter 0.25s ease !important;
+  pointer-events: none !important;
+}
+
+/* Dynamic Glowing Ice-Red Hover Effect */
+.icy-launch-btn--circle:hover {
+  transform: translateY(-2px) scale(1.1) !important;
+  background: radial-gradient(circle at 35% 30%,
+      rgba(254, 202, 202, 0.82) 0%,
+      rgba(239, 68, 68, 0.8) 40%,
+      rgba(185, 28, 28, 0.9) 100%) !important;
+  border-color: #ffffff !important;
+  box-shadow:
+    0 16px 36px rgba(220, 38, 38, 0.55),
+    0 0 32px rgba(254, 202, 202, 0.8),
+    inset 0 2px 5px rgba(255, 255, 255, 0.95),
+    inset 0 -2px 5px rgba(153, 27, 27, 0.6) !important;
+}
+
+.icy-launch-btn--circle:hover .power-svg {
+  transform: translate(-50%, -50%) scale(1.12) !important;
+  filter: drop-shadow(0 0 12px #ffffff) drop-shadow(0 0 20px rgba(254, 202, 202, 0.95)) !important;
+}
+
+.countdown-pop {
+  animation: countdownNumberPop 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes countdownNumberPop {
+  0% {
+    transform: translate(-50%, -50%) scale(0.3);
+    opacity: 0;
+  }
+
+  60% {
+    transform: translate(-50%, -50%) scale(1.35);
+    opacity: 1;
+  }
+
+  100% {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 1;
+  }
+}
+
+.icy-launch-btn--circle .countdown-number {
+  position: absolute !important;
+  top: 50% !important;
+  left: 50% !important;
+  transform: translate(-50%, -50%) !important;
+  width: 36px !important;
+  height: 36px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  margin: 0 !important;
+  font-size: 1.55rem !important;
+  font-weight: 900 !important;
+  color: #ea6363 !important;
+  text-shadow: 0 0 12px #ffffff, 0 0 24px #ef4444 !important;
+}
+
+.icy-launch-btn--circle .countdown-ignition-dot {
+  position: absolute !important;
+  top: 50% !important;
+  left: 50% !important;
+  transform: translate(-50%, -50%) !important;
+  width: 16px !important;
+  height: 16px !important;
+  border-radius: 50% !important;
+  margin: 0 !important;
+  background: #ffffff;
+  box-shadow: 0 0 16px #ffffff, 0 0 30px #ef4444;
+  animation: pulse-dot 0.4s ease-in-out infinite;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+/* Ice crystal light reflection across the red button */
+.icy-launch-btn::before {
+  content: '';
+  position: absolute;
+  top: -60%;
+  left: -80%;
+  width: 260%;
+  height: 220%;
+  background: linear-gradient(115deg,
+      transparent 20%,
+      rgba(255, 255, 255, 0.15) 35%,
+      rgba(254, 226, 226, 0.5) 50%,
+      rgba(255, 255, 255, 0.2) 65%,
+      transparent 80%);
+  transform: translateX(-40%) skewX(-22deg);
+  transition: transform 0.65s ease;
+  pointer-events: none;
+}
+
+.icy-launch-btn:hover {
+  transform: translateY(-2px) scale(1.03);
+  background: linear-gradient(135deg,
+      rgba(239, 68, 68, 0.62) 0%,
+      rgba(220, 38, 38, 0.72) 45%,
+      rgba(153, 27, 27, 0.78) 100%);
+  border-color: rgba(255, 255, 255, 0.75);
+  box-shadow:
+    0 18px 36px rgba(220, 38, 38, 0.38),
+    0 0 24px rgba(254, 202, 202, 0.45),
+    inset 0 2px 4px rgba(255, 255, 255, 0.8);
+}
+
+.icy-launch-btn:hover::before {
+  transform: translateX(45%) skewX(-22deg);
+}
+
+.icy-launch-btn:active {
+  transform: translateY(1px) scale(0.98);
+}
+
+.icy-launch-btn.is-counting {
+  background: linear-gradient(135deg,
+      rgba(239, 68, 68, 0.72) 0%,
+      rgba(220, 38, 38, 0.82) 50%,
+      rgba(185, 28, 28, 0.88) 100%);
+  border-color: #ffffff;
+  box-shadow: 0 0 28px rgba(248, 113, 113, 0.6), inset 0 2px 4px rgba(255, 255, 255, 0.9);
+  animation: countdown-pulse 0.8s ease-in-out infinite alternate;
+}
+
+@keyframes countdown-pulse {
+  from {
+    transform: scale(1);
+    box-shadow: 0 0 20px rgba(248, 113, 113, 0.4);
+  }
+
+  to {
+    transform: scale(1.05);
+    box-shadow: 0 0 35px rgba(248, 113, 113, 0.8);
+  }
+}
+
+.countdown-number {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #ffffff;
+  color: #dc2626;
+  font-size: 0.82rem;
+  font-weight: 900;
+  box-shadow: 0 0 10px rgba(255, 255, 255, 0.9);
+  animation: num-scale 0.75s ease-out;
+}
+
+@keyframes num-scale {
+  0% {
+    transform: scale(0.4);
+    opacity: 0;
+  }
+
+  60% {
+    transform: scale(1.25);
+    opacity: 1;
+  }
+
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.countdown-ignition-dot {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #ffffff;
+  box-shadow: 0 0 14px #ffffff, 0 0 24px #ef4444;
+  animation: pulse-dot 0.5s ease-in-out infinite;
+}
+
+.icy-launch-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  animation: bounce-cue 1.8s ease-in-out infinite;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
+}
+
+@keyframes bounce-cue {
+
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(3px);
+  }
+}
+
+.icy-launch-text {
+  text-shadow: 0 1px 4px rgba(76, 5, 5, 0.4), 0 0 8px rgba(255, 255, 255, 0.3);
+}
+
+.scroll-cue {
+  display: none !important;
 }
 
 .scroll-cue-dot {
@@ -766,7 +1059,7 @@
 }
 
 /* ========================================================
-   TRANSITION STORIES (Icy / Glacial Atmospheric Cards)
+   TRANSITION STORIES (Icy / Glacial Atmospheric Cards with 3D Tilt)
    ======================================================== */
 .transition-story-card {
   position: absolute;
@@ -778,13 +1071,17 @@
   align-items: center;
   justify-content: center;
   text-align: center;
-  gap: 1.1rem;
-  max-width: min(90vw, 48rem);
-  padding: 1.6rem;
+  gap: 1.25rem;
+  max-width: min(96vw, 72rem);
+  width: 100%;
+  padding: 1.6rem 1.2rem;
   pointer-events: none;
   z-index: 5;
   will-change: transform, opacity;
   user-select: none;
+  perspective: 1000px;
+  transform-style: preserve-3d;
+  transition: transform 0.2s cubic-bezier(0.2, 0, 0.2, 1);
 }
 
 .story-badge {
@@ -797,6 +1094,9 @@
   border: 1px solid rgba(255, 255, 255, 0.42);
   backdrop-filter: blur(18px);
   box-shadow: 0 8px 24px rgba(8, 26, 40, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.55);
+  transform: translateZ(24px);
+  transform-style: preserve-3d;
+  transition: transform 0.2s ease-out;
 }
 
 .story-badge-dot {
@@ -819,11 +1119,13 @@
 
 .story-title {
   margin: 0;
-  font-size: clamp(2rem, 5.2vw, 4.4rem);
+  max-width: 68rem;
+  font-size: clamp(2rem, 4.4vw, 3.8rem);
   font-weight: 850;
-  letter-spacing: -0.025em;
+  letter-spacing: -0.015em;
   text-transform: uppercase;
-  line-height: 1.05;
+  line-height: 1.15;
+  text-wrap: balance;
   background: linear-gradient(180deg,
       #ffffff 0%,
       #f6fbff 35%,
@@ -833,21 +1135,27 @@
   -webkit-text-fill-color: transparent;
   filter:
     drop-shadow(0 2px 6px rgba(255, 255, 255, 0.65)) drop-shadow(0 6px 18px rgba(10, 32, 50, 0.28));
+  transform: translateZ(48px);
+  transform-style: preserve-3d;
+  transition: transform 0.2s ease-out;
 }
 
 .story-tagline {
-  margin: 0;
-  max-width: 36rem;
-  font-size: clamp(0.78rem, 1.35vw, 1.08rem);
-  font-weight: 450;
-  line-height: 1.55;
-  letter-spacing: 0.02em;
-  color: #f8fcff;
-  text-shadow: 0 1px 3px rgba(255, 255, 255, 0.55), 0 3px 12px rgba(10, 30, 48, 0.32);
+  margin: 0 auto;
+  max-width: 60rem;
+  font-size: clamp(1.15rem, 2vw, 1.55rem);
+  font-weight: 550;
+  line-height: 1.6;
+  letter-spacing: 0.015em;
+  color: #ffffff;
+  text-shadow: 0 2px 8px rgba(255, 255, 255, 0.65), 0 4px 18px rgba(10, 30, 48, 0.45);
+  transform: translateZ(32px);
+  transform-style: preserve-3d;
+  transition: transform 0.2s ease-out;
 }
 
 .story-spacer {
-  height: 1200vh;
+  height: 2400vh;
 }
 
 @media (max-width: 900px) {
@@ -890,18 +1198,15 @@
   }
 
   .hero-services-tagline {
-    font-size: clamp(0.68rem, 2.6vw, 0.85rem);
-    line-height: 1.45;
-  }
-
-  .scroll-cue {
-    bottom: 1.4rem;
+    font-size: clamp(1.1rem, 3.8vw, 1.55rem);
+    line-height: 1.55;
+    max-width: 90vw;
   }
 }
 
 @media (max-width: 768px) {
   .story-spacer {
-    height: 1350vh;
+    height: 2800vh;
   }
 
   .scene-overlay {
@@ -914,30 +1219,35 @@
   }
 
   .brand-pill {
-    padding: 0.38rem 0.65rem;
+    padding: 0.42rem 0.75rem;
     gap: 0.45rem;
   }
 
   .brand-mark {
-    width: 1.45rem;
-    height: 1.45rem;
-    font-size: 0.72rem;
+    width: 1.55rem;
+    height: 1.55rem;
+    font-size: 0.78rem;
   }
 
   .brand-name {
-    font-size: 0.6rem;
+    font-size: 0.7rem;
     letter-spacing: 0.08rem;
   }
 
+  .devcore-liquid-nav {
+    transform: scale(0.88);
+    transform-origin: right center;
+  }
+
   .topnav {
-    padding: 0.3rem 0.4rem;
-    gap: 0.15rem;
+    padding: 0.35rem 0.5rem;
+    gap: 0.2rem;
   }
 
   .topnav a,
   .topnav-btn {
-    padding: 0.38rem 0.52rem;
-    font-size: 0.58rem;
+    padding: 0.42rem 0.6rem;
+    font-size: 0.68rem;
     letter-spacing: 0.06rem;
     white-space: nowrap;
   }
@@ -950,47 +1260,61 @@
   .footer-shell {
     min-width: 0;
     width: 100%;
-    padding: 0.5rem 0.65rem 0.5rem 0.9rem;
+    padding: 0.6rem 0.8rem 0.6rem 1rem;
     gap: 0.6rem;
   }
 
   .footer-shell span {
-    font-size: 0.58rem;
-    letter-spacing: 0.05rem;
+    font-size: 0.72rem;
+    letter-spacing: 0.04rem;
+    line-height: 1.35;
   }
 
   .footer-shell a,
   .footer-shell-btn {
-    padding: 0.5rem 0.7rem;
-    font-size: 0.58rem;
-    letter-spacing: 0.05rem;
+    padding: 0.55rem 0.85rem;
+    font-size: 0.72rem;
+    letter-spacing: 0.04rem;
     white-space: nowrap;
   }
 
+  /* Highly legible, comfortable expanded mobile story cards */
   .transition-story-card {
     top: 48%;
-    gap: 0.75rem;
-    padding: 1rem;
-    max-width: 92vw;
+    gap: 1rem;
+    padding: 1.2rem 0.6rem;
+    max-width: 96vw;
+    width: 100%;
   }
 
   .story-badge {
-    padding: 0.32rem 0.75rem;
-    gap: 0.4rem;
+    padding: 0.38rem 0.95rem;
+    gap: 0.45rem;
   }
 
   .story-badge span:last-child {
-    font-size: 0.56rem;
-    letter-spacing: 0.1rem;
+    font-size: 0.68rem;
+    letter-spacing: 0.14rem;
   }
 
   .story-title {
-    font-size: clamp(1.6rem, 7.5vw, 2.5rem);
+    font-size: clamp(1.65rem, 7.5vw, 2.4rem);
+    line-height: 1.2;
+    max-width: 94vw;
   }
 
   .story-tagline {
-    font-size: clamp(0.68rem, 2.8vw, 0.84rem);
-    line-height: 1.45;
+    font-size: clamp(1.05rem, 4.2vw, 1.28rem);
+    line-height: 1.6;
+    font-weight: 550;
+    max-width: 95vw;
+    text-shadow: 0 1px 4px rgba(255, 255, 255, 0.7), 0 3px 14px rgba(10, 30, 48, 0.5);
+  }
+
+  .story-cta-btn {
+    padding: 0.75rem 1.6rem;
+    font-size: 0.82rem;
+    letter-spacing: 0.08rem;
   }
 }
 
@@ -1001,86 +1325,85 @@
   }
 
   .brand-pill {
-    padding: 0.32rem 0.55rem;
-    gap: 0.35rem;
+    padding: 0.38rem 0.65rem;
+    gap: 0.4rem;
   }
 
   .brand-mark {
-    width: 1.35rem;
-    height: 1.35rem;
-    font-size: 0.68rem;
+    width: 1.45rem;
+    height: 1.45rem;
+    font-size: 0.72rem;
   }
 
   .brand-name {
-    font-size: 0.54rem;
-    letter-spacing: 0.05rem;
+    font-size: 0.64rem;
+    letter-spacing: 0.06rem;
+  }
+
+  .devcore-liquid-nav {
+    transform: scale(0.76);
+    transform-origin: right center;
   }
 
   .topnav {
-    padding: 0.28rem 0.35rem;
-    gap: 0.1rem;
+    padding: 0.3rem 0.4rem;
+    gap: 0.15rem;
   }
 
   .topnav a,
   .topnav-btn {
-    padding: 0.32rem 0.44rem;
-    font-size: 0.54rem;
-    letter-spacing: 0.04rem;
+    padding: 0.38rem 0.52rem;
+    font-size: 0.62rem;
+    letter-spacing: 0.05rem;
   }
 
   .hero-word-we {
     left: 4vw;
     right: auto;
-    top: 19vh;
+    top: 18vh;
     transform: none;
-    font-size: clamp(1.3rem, 5.4vw, 2.1rem);
+    font-size: clamp(1.8rem, 7.8vw, 2.7rem);
     text-align: left;
-    max-width: 38vw;
+    max-width: 42vw;
   }
 
   .hero-word-products {
     right: 4vw;
     left: auto;
-    top: 19vh;
+    top: 18vh;
     transform: none;
-    font-size: clamp(1.3rem, 5.4vw, 2.1rem);
+    font-size: clamp(1.8rem, 7.8vw, 2.7rem);
     text-align: right;
-    max-width: 38vw;
+    max-width: 42vw;
   }
 
   .hero-word-this-way {
-    bottom: 7vh;
-    font-size: clamp(1.75rem, 7.2vw, 2.5rem);
+    bottom: 8vh;
+    font-size: clamp(2.2rem, 9.4vw, 3.2rem);
   }
 
   .hero-services-block {
-    bottom: 12.5vh;
+    bottom: 14vh;
     max-width: 95vw;
-    gap: 0.3rem;
+    gap: 0.55rem;
+    padding: 0 0.5rem;
   }
 
   .hero-services-eyebrow {
-    font-size: 0.55rem;
-    letter-spacing: 0.15rem;
+    font-size: 0.68rem;
+    letter-spacing: 0.18rem;
   }
 
   .hero-services-heading {
-    font-size: clamp(1.1rem, 5.2vw, 1.45rem);
+    font-size: clamp(1.5rem, 6.8vw, 2.1rem);
+    line-height: 1.15;
   }
 
   .hero-services-tagline {
-    font-size: 0.62rem;
+    font-size: clamp(1.1rem, 4.4vw, 1.45rem);
+    line-height: 1.55;
     letter-spacing: 0.02rem;
-  }
-
-  .scroll-cue {
-    bottom: 1.2rem;
-    padding: 0.32rem 0.85rem;
-  }
-
-  .scroll-cue span {
-    font-size: 0.58rem;
-    letter-spacing: 0.14rem;
+    font-weight: 600;
   }
 }
 

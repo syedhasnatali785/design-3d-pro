@@ -1,19 +1,18 @@
 import { useEffect, useRef, useState } from 'react'
 import './App.css'
 
-// Desktop Hero Sequence (Widescreen 16:9)
-const HERO_DESKTOP_FRAMES = Object.entries(
-  import.meta.glob('../Rocket_launches_from_icy_land_20261027031051_frames/**/*.png', {
-    eager: true,
-    import: 'default',
-  }),
-)
-  .sort(([a], [b]) => a.localeCompare(b, undefined, { numeric: true }))
-  .map(([, src]) => src)
+// Animated single-line loader phrases
+const LOADER_MESSAGES = [
+  'Welcome to DevCore',
+  'We are loading DevCore...',
+  'Ham kia services provide krte hain?',
+  'Cloud POS Web Apps & Custom Systems',
+  'Architecting Next-Gen Web Architecture...',
+]
 
-// Mobile Hero Sequence (Portrait 9:16 - 720x1280)
-const HERO_MOBILE_FRAMES = Object.entries(
-  import.meta.glob('../Rocket_launching_from_icy_land_3b8ce17c_frames/**/*.png', {
+// Unified Hero Sequence for both Desktop & Mobile
+const HERO_FRAMES = Object.entries(
+  import.meta.glob('../Rocket_launches_from_icy_land_20261027031051_frames/**/*.png', {
     eager: true,
     import: 'default',
   }),
@@ -51,7 +50,7 @@ const TRANSITION_STORIES = [
     badge: 'SERVICES',
     title: 'CLOUD POS WEB APP',
     tagline:
-      'we provide services like POS Web app and different software systems with offline-first billing, fast inventory sync, and multi-terminal control.',
+      'We provide services like POS Web apps and custom software systems with offline-first billing, real-time inventory sync, and multi-terminal command.',
     cta: 'Explore',
     target: 0.56,
   },
@@ -62,7 +61,7 @@ const TRANSITION_STORIES = [
     badge: 'ENGINEERING',
     title: 'CUSTOM SOFTWARE SYSTEMS',
     tagline:
-      'we provide services like POS Web app and different software systems designed for high-concurrency databases, scalable APIs, and automated workflows.',
+      'We build high-concurrency software systems, resilient backend architectures, and automated business workflows tailored for fast-growing companies.',
     cta: 'Discover',
     target: 0.74,
   },
@@ -73,7 +72,7 @@ const TRANSITION_STORIES = [
     badge: 'PERFORMANCE',
     title: 'NEXT-GEN WEB ARCHITECTURE',
     tagline:
-      'we provide services like POS Web app and different software systems powered by 60FPS WebGL graphics and modern enterprise infrastructure.',
+      'We engineer ultra-fluid 60FPS WebGL digital experiences, high-performance web applications, and enterprise-grade cloud ecosystems.',
     cta: 'Contact',
     target: 0.95,
   },
@@ -84,7 +83,7 @@ const TRANSITION_STORIES = [
     badge: 'CONNECT',
     title: 'LET’S BUILD YOUR NEXT SYSTEM',
     tagline:
-      'we provide services like POS Web app and different software systems. Get in touch with DevCore to architect and launch your digital solution.',
+      'We provide complete engineering for POS Web apps and bespoke software systems. Connect with DevCore to architect and launch your digital future.',
     cta: 'Book a call',
     href: 'mailto:hello@devcore.tech?subject=Project%20Inquiry%20-%20POS%20%26%20Software%20Systems',
   },
@@ -201,10 +200,24 @@ function createSnowflakes(count, width, height) {
 function AppComplete() {
   const [isLoading, setIsLoading] = useState(true)
   const [loadPercent, setLoadPercent] = useState(0)
+  const [loaderMsgIndex, setLoaderMsgIndex] = useState(0)
+
+  useEffect(() => {
+    if (!isLoading) return
+    const timer = setInterval(() => {
+      setLoaderMsgIndex((prev) => (prev + 1) % LOADER_MESSAGES.length)
+    }, 2200)
+    return () => clearInterval(timer)
+  }, [isLoading])
   const [activeSection, setActiveSection] = useState('home')
   const activeSectionRef = useRef('home')
   const [servicesOpen, setServicesOpen] = useState(false)
   const dropdownRef = useRef(null)
+
+  // Launch button countdown state: null | 3 | 2 | 1 | 'IGNITION'
+  const [countdown, setCountdown] = useState(null)
+  const countdownTimerRef = useRef(null)
+  const shakeIntensityRef = useRef(0)
 
   const headerRef = useRef(null)
   const footerRef = useRef(null)
@@ -214,12 +227,13 @@ function AppComplete() {
   const cloudsRef = useRef([])
   const whiteRef = useRef(null)
   const heroCopyRef = useRef(null)
+  const launchBtnRef = useRef(null)
   const scrollCueRef = useRef(null)
   const servicesRef = useRef(null)
   const storyRefs = useRef([])
+  const mouseRef = useRef({ x: 0, y: 0, targetX: 0, targetY: 0 })
 
-  const heroDesktopImagesRef = useRef([])
-  const heroMobileImagesRef = useRef([])
+  const heroImagesRef = useRef([])
   const tunnelImagesRef = useRef([])
   const cloudsImagesRef = useRef([])
 
@@ -230,8 +244,18 @@ function AppComplete() {
         setServicesOpen(false)
       }
     }
+    const handleMouseMove = (e) => {
+      const halfW = window.innerWidth / 2
+      const halfH = window.innerHeight / 2
+      mouseRef.current.targetX = (e.clientX - halfW) / halfW
+      mouseRef.current.targetY = (e.clientY - halfH) / halfH
+    }
     document.addEventListener('mousedown', handleClickOutside)
-    return () => document.removeEventListener('mousedown', handleClickOutside)
+    window.addEventListener('mousemove', handleMouseMove, { passive: true })
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+      window.removeEventListener('mousemove', handleMouseMove)
+    }
   }, [])
 
   // Smooth scroll directly to frame section
@@ -246,13 +270,44 @@ function AppComplete() {
     })
   }
 
-  // Preload frames with fast initial readiness (prioritizes active device)
+  // Trigger Countdown 3 -> 2 -> 1 -> Launch with Minor Screen Shake
+  const handleLaunchClick = (e) => {
+    e?.stopPropagation()
+    if (countdown !== null) return
+    setCountdown(3)
+
+    countdownTimerRef.current = setTimeout(() => {
+      setCountdown(2)
+      countdownTimerRef.current = setTimeout(() => {
+        setCountdown(1)
+        countdownTimerRef.current = setTimeout(() => {
+          setCountdown('IGNITION')
+          // Trigger slight minor launch rocket shake
+          shakeIntensityRef.current = 1.2
+
+          // Smoothly scroll to services section
+          scrollToProgress(0.22)
+
+          countdownTimerRef.current = setTimeout(() => {
+            setCountdown(null)
+          }, 2400)
+        }, 900)
+      }, 900)
+    }, 900)
+  }
+
+  // Clean up timer on unmount
+  useEffect(() => {
+    return () => {
+      if (countdownTimerRef.current) clearTimeout(countdownTimerRef.current)
+    }
+  }, [])
+
+  // Preload frames with fast initial readiness (unified hero sequence)
   useEffect(() => {
     let isCancelled = false
-    const isMobile = window.innerWidth <= 768 || window.innerHeight > window.innerWidth
     // Preload & Decode frames with complete verification before revealing homepage
-    const primaryHero = isMobile ? HERO_MOBILE_FRAMES : HERO_DESKTOP_FRAMES
-    const totalRequiredFrames = primaryHero.length + TUNNEL_FRAMES.length + CLOUDS_FRAMES.length
+    const totalRequiredFrames = HERO_FRAMES.length + TUNNEL_FRAMES.length + CLOUDS_FRAMES.length
     let loadedCount = 0
 
     const updateProgress = () => {
@@ -271,45 +326,33 @@ function AppComplete() {
       }
     }
 
-    const loadAndVerifySequence = (urls, isPriority = true) => {
+    const loadAndVerifySequence = (urls) => {
       return urls.map((url) => {
         const img = new Image()
         img.src = url
 
-        if (isPriority) {
-          const handleComplete = () => {
-            // img.decode() forces GPU to decompress image immediately, eliminating first-scroll stutter/lag
-            if (typeof img.decode === 'function') {
-              img.decode().then(updateProgress).catch(updateProgress)
-            } else {
-              updateProgress()
-            }
-          }
-
-          if (img.complete && img.naturalWidth > 0) {
-            handleComplete()
+        const handleComplete = () => {
+          // img.decode() forces GPU to decompress image immediately, eliminating first-scroll stutter/lag
+          if (typeof img.decode === 'function') {
+            img.decode().then(updateProgress).catch(updateProgress)
           } else {
-            img.onload = handleComplete
-            img.onerror = updateProgress
+            updateProgress()
           }
+        }
+
+        if (img.complete && img.naturalWidth > 0) {
+          handleComplete()
+        } else {
+          img.onload = handleComplete
+          img.onerror = updateProgress
         }
         return img
       })
     }
 
-    if (isMobile) {
-      heroMobileImagesRef.current = loadAndVerifySequence(HERO_MOBILE_FRAMES, true)
-      tunnelImagesRef.current = loadAndVerifySequence(TUNNEL_FRAMES, true)
-      cloudsImagesRef.current = loadAndVerifySequence(CLOUDS_FRAMES, true)
-      // Background idle load for non-active screen mode
-      heroDesktopImagesRef.current = loadAndVerifySequence(HERO_DESKTOP_FRAMES, false)
-    } else {
-      heroDesktopImagesRef.current = loadAndVerifySequence(HERO_DESKTOP_FRAMES, true)
-      tunnelImagesRef.current = loadAndVerifySequence(TUNNEL_FRAMES, true)
-      cloudsImagesRef.current = loadAndVerifySequence(CLOUDS_FRAMES, true)
-      // Background idle load for non-active screen mode
-      heroMobileImagesRef.current = loadAndVerifySequence(HERO_MOBILE_FRAMES, false)
-    }
+    heroImagesRef.current = loadAndVerifySequence(HERO_FRAMES)
+    tunnelImagesRef.current = loadAndVerifySequence(TUNNEL_FRAMES)
+    cloudsImagesRef.current = loadAndVerifySequence(CLOUDS_FRAMES)
 
     // High ceiling fallback safety timeout (e.g. if a single asset network hangs)
     const fallbackTimeout = setTimeout(() => {
@@ -380,9 +423,8 @@ function AppComplete() {
       const delta = targetProgress - currentProgress
       const absDelta = Math.abs(delta)
 
-      // Buttery smooth glide (~1 second gradual momentum flow):
-      // Moves slowly and gracefully without rushing, allowing time to read text and see animations
-      const lerpFactor = isMobile ? 0.052 : 0.044
+      // Cinematic, balanced pacing (gracefully slowed down):
+      const lerpFactor = isMobile ? 0.032 : 0.026
 
       currentProgress += delta * lerpFactor
 
@@ -390,18 +432,47 @@ function AppComplete() {
         currentProgress = targetProgress
       }
 
-      // Draw canvas with optical frame blending
+      // Smooth mouse lerp for 3D tilts & micro camera sway
+      mouseRef.current.x += (mouseRef.current.targetX - mouseRef.current.x) * 0.05
+      mouseRef.current.y += (mouseRef.current.targetY - mouseRef.current.y) * 0.05
+
+      // Cinema-Grade Smooth Handheld Camera Motion:
+      // Multi-frequency organic sine harmonics simulate natural human operator breathing & walking/holding camera
+      const now = Date.now()
+      // Dynamic shake boost while scrolling through sections (chalte huwe thora handheld feel)
+      const walkFactor = Math.min(absDelta * 280, 1.8) // dynamically amplifies when moving
+
+      const handheldX = (Math.sin(now * 0.0011) * 3.2 + Math.sin(now * 0.0028) * 2.1 + Math.sin(now * 0.0065) * 1.2) * (1 + walkFactor * 0.6)
+      const handheldY = (Math.cos(now * 0.0009) * 2.8 + Math.cos(now * 0.0023) * 1.8 + Math.sin(now * 0.0055) * 0.9) * (1 + walkFactor * 0.6)
+      const handheldRot = (Math.sin(now * 0.0008) * 0.28 + Math.sin(now * 0.0021) * 0.16) * (1 + walkFactor * 0.5)
+
+      // Minor screen shake on rocket launch ignition (smoothly decays)
+      let shakeX = 0
+      let shakeY = 0
+      if (shakeIntensityRef.current > 0.002) {
+        shakeX = (Math.random() - 0.5) * 6.5 * shakeIntensityRef.current
+        shakeY = (Math.random() - 0.5) * 6.5 * shakeIntensityRef.current
+        shakeIntensityRef.current *= 0.93 // exponential damping
+      } else {
+        shakeIntensityRef.current = 0
+      }
+
+      // Living Atmospheric Reaction on Frames (Camera Breathing, Handheld Sway & Launch Shake)
       const canvas = canvasRef.current
       if (canvas) {
+        const camTiltX = mouseRef.current.x * 0.8 + handheldX + shakeX
+        const camTiltY = mouseRef.current.y * 0.6 + handheldY + shakeY
+        const breathe = Math.sin(now * 0.0014) * 0.45
+        // scale 1.04 provides comfortable margin so edges never show black border during shake
+        canvas.style.transform = `scale(1.042) translate3d(${camTiltX.toFixed(2)}px, ${(camTiltY + breathe).toFixed(2)}px, 0) rotate(${handheldRot.toFixed(3)}deg)`
+
         const ctx = canvas.getContext('2d')
         if (ctx) {
           ctx.imageSmoothingEnabled = true
           ctx.imageSmoothingQuality = 'high'
 
-          // Select appropriate hero sequence (portrait 720x1280 mobile vs widescreen desktop)
-          const activeHero = isMobile
-            ? (heroMobileImagesRef.current.length > 0 ? heroMobileImagesRef.current : heroDesktopImagesRef.current)
-            : (heroDesktopImagesRef.current.length > 0 ? heroDesktopImagesRef.current : heroMobileImagesRef.current)
+          // Unified Hero Sequence for both Desktop & Mobile
+          const activeHero = heroImagesRef.current
 
           // Seamless direct playback across 3 continuous sequence stages
           // No freeze/dead-zone pauses: sequence 1 -> sequence 2 -> sequence 3 flow smoothly
@@ -582,21 +653,26 @@ function AppComplete() {
         setActiveSection(currentSec)
       }
 
-      // Update Hero Text Copy (remains fully readable, then fades gently)
+      // Update Hero Text Copy (remains fully readable, then fades gently with 3D tilt)
       if (heroCopyRef.current) {
         const tp = clamp((currentProgress - 0.05) / 0.14, 0, 1)
+        const tiltX = -mouseRef.current.y * 12
+        const tiltY = mouseRef.current.x * 14
         heroCopyRef.current.style.opacity = (1 - tp).toFixed(3)
-        heroCopyRef.current.style.transform = `translateY(${-24 * tp}px)`
+        heroCopyRef.current.style.transform = `translateY(${-24 * tp}px) rotateX(${tiltX.toFixed(2)}deg) rotateY(${tiltY.toFixed(2)}deg)`
       }
 
-      // Update Scroll Cue
-      if (scrollCueRef.current) {
-        const scp = clamp((currentProgress - 0.02) / 0.06, 0, 1)
-        scrollCueRef.current.style.opacity = (1 - scp).toFixed(3)
-        scrollCueRef.current.style.transform = `translateX(-50%) translateY(${scp * 12}px)`
+      // Update Icy Red Launch Button (visible at hero, smoothly fades on scroll)
+      if (launchBtnRef.current) {
+        const lbp = clamp((currentProgress - 0.04) / 0.12, 0, 1)
+        const tiltX = -mouseRef.current.y * 8
+        const tiltY = mouseRef.current.x * 10
+        launchBtnRef.current.style.opacity = (1 - lbp).toFixed(3)
+        launchBtnRef.current.style.transform = `translateX(-50%) translateY(${lbp * 20}px) rotateX(${tiltX.toFixed(2)}deg) rotateY(${tiltY.toFixed(2)}deg)`
+        launchBtnRef.current.style.pointerEvents = lbp < 0.8 ? 'auto' : 'none'
       }
 
-      // Update Services Text Block (strictly visible from frame_035.png to frame_058.png with icy styling)
+      // Update Services Text Block (strictly visible from frame_035.png to frame_058.png with 3D depth)
       if (servicesRef.current) {
         // frame_035 = index 34/59 * 0.30 = 0.1729
         // frame_058 = index 57/59 * 0.30 = 0.2898
@@ -628,12 +704,14 @@ function AppComplete() {
           }
         }
 
+        const tiltX = -mouseRef.current.y * 10
+        const tiltY = mouseRef.current.x * 12
         servicesRef.current.style.opacity = servOpacity.toFixed(3)
-        servicesRef.current.style.transform = `translateX(-50%) translateY(${servY.toFixed(1)}px)`
+        servicesRef.current.style.transform = `translateX(-50%) translateY(${servY.toFixed(1)}px) rotateX(${tiltX.toFixed(2)}deg) rotateY(${tiltY.toFixed(2)}deg)`
         servicesRef.current.style.display = servOpacity > 0.005 ? 'flex' : 'none'
       }
 
-      // Update Transition Stories Cards (data-driven with icy atmospheric animation)
+      // Update Transition Stories Cards (data-driven with icy 3D tilts and atmospheric depth)
       TRANSITION_STORIES.forEach((story, idx) => {
         const el = storyRefs.current[idx]
         if (!el) return
@@ -659,8 +737,11 @@ function AppComplete() {
           }
         }
 
+        const tiltX = -mouseRef.current.y * 11
+        const tiltY = mouseRef.current.x * 13
+
         el.style.opacity = op.toFixed(3)
-        el.style.transform = `translate(-50%, -50%) translateY(${y.toFixed(1)}px)`
+        el.style.transform = `translate(-50%, -50%) translateY(${y.toFixed(1)}px) rotateX(${tiltX.toFixed(2)}deg) rotateY(${tiltY.toFixed(2)}deg)`
         el.style.display = op > 0.005 ? 'flex' : 'none'
       })
 
@@ -695,17 +776,10 @@ function AppComplete() {
         aria-live="polite"
         aria-busy={isLoading}
       >
-        <div className="loader-card">
-          <div className="loader-ring" aria-hidden="true" />
-          <div className="loader-text-group">
-            <span className="loader-label">INITIALIZING SYSTEM</span>
-            <span className="loader-progress">
-              {isLoading ? `DECODING FRAMES • ${loadPercent}%` : 'READY'}
-            </span>
-          </div>
-          <div className="loader-bar-track" aria-hidden="true">
-            <div className="loader-bar-fill" style={{ width: `${loadPercent}%` }} />
-          </div>
+        <div className="loader-single-line-wrapper">
+          <p key={loaderMsgIndex} className="loader-shimmer-single-line">
+            {LOADER_MESSAGES[loaderMsgIndex]}
+          </p>
         </div>
       </div>
 
@@ -730,10 +804,11 @@ function AppComplete() {
             >
               <button
                 type="button"
-                className={`topnav-btn topnav-btn--dropdown ${activeSection === 'services' || activeSection === 'pos' || activeSection === 'software'
-                  ? 'is-active'
-                  : ''
-                  }`}
+                className={`topnav-btn topnav-btn--dropdown ${
+                  activeSection === 'services' || activeSection === 'pos' || activeSection === 'software'
+                    ? 'is-active'
+                    : ''
+                }`}
                 onClick={() => {
                   setServicesOpen((prev) => !prev)
                   scrollToProgress(0.22)
@@ -838,11 +913,53 @@ function AppComplete() {
               <span className="hero-word hero-word-this-way">This Way</span>
             </div>
 
+            <div className="hero-launch-wrapper" ref={launchBtnRef}>
+              <button
+                type="button"
+                className={`icy-launch-btn icy-launch-btn--circle ${countdown !== null ? 'is-counting' : ''}`}
+                onClick={handleLaunchClick}
+                disabled={countdown !== null}
+                aria-label="Power launch to services"
+                title={countdown === null ? 'Power Launch' : `Countdown: ${countdown}`}
+              >
+                {countdown === null ? (
+                  /* Clean, Dead-Centered Power Icon */
+                  <svg
+                    width="26"
+                    height="26"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    className="power-svg"
+                  >
+                    <path d="M18.36 6.64a9 9 0 1 1-12.73 0" />
+                    <line x1="12" y1="2" x2="12" y2="12" />
+                  </svg>
+                ) : countdown === 'IGNITION' ? (
+                  <span className="countdown-ignition-dot" />
+                ) : (
+                  <span key={countdown} className="countdown-number countdown-pop">
+                    {countdown}
+                  </span>
+                )}
+                <span className="sr-only">
+                  {countdown === null
+                    ? 'Power Launch'
+                    : countdown === 'IGNITION'
+                    ? 'Ignition'
+                    : `Countdown ${countdown}`}
+                </span>
+              </button>
+            </div>
+
             <div className="hero-services-block" ref={servicesRef} aria-hidden={true} style={{ opacity: 0, display: 'none' }}>
               <div className="hero-services-eyebrow">OUR SERVICES</div>
               <h2 className="hero-services-heading">POS & SOFTWARE SYSTEMS</h2>
               <p className="hero-services-tagline">
-                we provide services like POS Web app and different software systems
+                We provide services like POS Web apps and custom software systems tailored for enterprise growth.
               </p>
             </div>
 
@@ -881,11 +998,6 @@ function AppComplete() {
                 )}
               </div>
             ))}
-
-            <div className="scroll-cue" ref={scrollCueRef} aria-label="Scroll down">
-              <span className="scroll-cue-dot" aria-hidden="true" />
-              <span>Scroll Down</span>
-            </div>
           </div>
         </div>
 
